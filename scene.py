@@ -144,10 +144,14 @@ def assemble():
         _translate([house], 0.0, ty, 0.0)
         scene.append(house)
 
-    # --- pomost: wchodzi w morze poza poludniowa krawedzia ladu (-Z) ---
+    # --- pomost: od nowej linii brzegowej (-Z) w glab morza ---
+    # Nowy teren (terrain v2) to pas wybrzeza: lad po stronie +Z, woda po -Z,
+    # a lukowa linia brzegowa biegnie w osi x=0 okolo z=-13. Pomost (lokalne
+    # z=0..12, os x=0) sadowimy tak, by jego ladowy koniec siegal brzegu, a
+    # poklad wchodzil nad otwarta wode (z od ~-13 do ~-25).
     pier = _load_part("pier").build()
     _namespace_materials(pier, "pier")
-    _translate(pier, 0.0, 0.0, -36.0)
+    _translate(pier, 0.0, 0.0, -25.0)
     for g in pier:
         g["name"] = "pier_" + g["name"]
     scene.extend(pier)
