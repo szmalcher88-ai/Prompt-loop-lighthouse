@@ -79,6 +79,28 @@ BOATS = [
                 "seats": 3, "seed": 22}},
 ]
 
+# Zagajnik sosen za miasteczkiem (czesc parts/tree.py). Domy stoja w rzedach
+# z=9 / z=15, wiec zagajnik sadzimy glebiej w ladzie (+Z, z=22..28) na trawie.
+# Kazda sosna ma inna wysokosc, promien korony i seed (zakaz idealnych kopii);
+# assembler sadzi ja na terenie (min-Y == wysokosc najblizszego wierzcholka
+# terenu), tak jak domy. Grupy tree_1..tree_N.
+TREES = [
+    {"x": -22.0, "z": 23.0,
+     "params": {"height": 6.4, "base_radius": 1.5, "layers": 3, "seed": 31}},
+    {"x": -14.0, "z": 26.0,
+     "params": {"height": 4.6, "base_radius": 1.1, "layers": 3, "seed": 32}},
+    {"x": -6.0, "z": 22.0,
+     "params": {"height": 7.2, "base_radius": 1.7, "layers": 4, "seed": 33}},
+    {"x": 3.0, "z": 27.0,
+     "params": {"height": 5.2, "base_radius": 1.2, "layers": 3, "seed": 34}},
+    {"x": 11.0, "z": 23.0,
+     "params": {"height": 6.0, "base_radius": 1.4, "layers": 3, "seed": 35}},
+    {"x": 19.0, "z": 26.0,
+     "params": {"height": 4.0, "base_radius": 1.0, "layers": 2, "seed": 36}},
+    {"x": 26.0, "z": 22.0,
+     "params": {"height": 5.8, "base_radius": 1.35, "layers": 3, "seed": 37}},
+]
+
 
 def _load_part(stem):
     path = PARTS / (stem + ".py")
@@ -190,6 +212,20 @@ def assemble():
         boat = _merge(groups, prefix)
         _translate([boat], spec["x"], 0.0, spec["z"])
         scene.append(boat)
+
+    # --- sosny: scalone w pojedyncze grupy tree_i, posadzone na terenie
+    # (jak domy: min-Y == wysokosc najblizszego wierzcholka terenu). ---
+    tree_mod = _load_part("tree")
+    for i, spec in enumerate(TREES, start=1):
+        prefix = "tree_%d" % i
+        groups = tree_mod.build(**spec["params"])
+        _namespace_materials(groups, prefix)
+        tree = _merge(groups, prefix)
+        _translate([tree], spec["x"], 0.0, spec["z"])
+        cx, cz = _centroid_xz(tree)
+        ty = _nearest_terrain_y(tverts, cx, cz)
+        _translate([tree], 0.0, ty, 0.0)
+        scene.append(tree)
 
     return scene
 
