@@ -102,6 +102,42 @@ TREES = [
 ]
 
 
+# Glazy nadmorskie (czesc parts/rocks.py). Linia brzegowa terenu (terrain v2)
+# biegnie lukiem z = -16 + 5*cos(pi*x/40); wieksza czesc glazow lezy wzdluz niej
+# tuz przy wodzie (waterline), a kilka wieksze siedzi na klifie pod latarnia
+# (okolice osi 0,0, na zboczu obok cokolu). Kazdy glaz rozni sie promieniem,
+# splaszczeniem, kolorem i seedem (zakaz idealnych kopii); assembler sadzi go na
+# terenie (min-Y == wysokosc najblizszego wierzcholka terenu) jak drzewa/domy.
+# Grupy rock_1..rock_N.
+ROCKS = [
+    {"x": -34.0, "z": -21.6,
+     "params": {"radius": 1.1, "scale_y": 0.65, "color": (0.52, 0.50, 0.47), "seed": 41}},
+    {"x": -26.0, "z": -19.5,
+     "params": {"radius": 0.8, "scale_y": 0.7, "color": (0.46, 0.45, 0.43), "seed": 42}},
+    {"x": -18.0, "z": -16.4,
+     "params": {"radius": 1.4, "scale_y": 0.6, "color": (0.55, 0.52, 0.48), "seed": 43}},
+    {"x": -10.0, "z": -13.7,
+     "params": {"radius": 0.9, "scale_y": 0.72, "color": (0.48, 0.47, 0.45), "seed": 44}},
+    {"x": -3.0, "z": -12.4,
+     "params": {"radius": 1.2, "scale_y": 0.64, "color": (0.50, 0.48, 0.44), "seed": 45}},
+    {"x": 5.0, "z": -12.6,
+     "params": {"radius": 0.7, "scale_y": 0.75, "color": (0.44, 0.43, 0.42), "seed": 46}},
+    {"x": 12.0, "z": -13.9,
+     "params": {"radius": 1.3, "scale_y": 0.6, "color": (0.53, 0.51, 0.47), "seed": 47}},
+    {"x": 20.0, "z": -16.6,
+     "params": {"radius": 0.95, "scale_y": 0.68, "color": (0.47, 0.46, 0.44), "seed": 48}},
+    {"x": 28.0, "z": -19.4,
+     "params": {"radius": 1.15, "scale_y": 0.66, "color": (0.51, 0.49, 0.46), "seed": 49}},
+    # --- glazy na klifie pod latarnia (na zboczu, obok cokolu) ---
+    {"x": -7.5, "z": -5.5,
+     "params": {"radius": 1.6, "scale_y": 0.7, "color": (0.49, 0.47, 0.44), "seed": 50}},
+    {"x": 7.5, "z": -5.0,
+     "params": {"radius": 1.5, "scale_y": 0.72, "color": (0.54, 0.51, 0.47), "seed": 51}},
+    {"x": 0.0, "z": 6.5,
+     "params": {"radius": 1.35, "scale_y": 0.68, "color": (0.46, 0.45, 0.43), "seed": 52}},
+]
+
+
 def _load_part(stem):
     path = PARTS / (stem + ".py")
     spec = importlib.util.spec_from_file_location("_part_" + stem, path)
@@ -226,6 +262,21 @@ def assemble():
         ty = _nearest_terrain_y(tverts, cx, cz)
         _translate([tree], 0.0, ty, 0.0)
         scene.append(tree)
+
+    # --- glazy: scalone w pojedyncze grupy rock_i, posadowione na terenie
+    # (jak drzewa: min-Y == wysokosc najblizszego wierzcholka terenu) wzdluz
+    # linii brzegowej i na klifie. ---
+    rock_mod = _load_part("rocks")
+    for i, spec in enumerate(ROCKS, start=1):
+        prefix = "rock_%d" % i
+        groups = rock_mod.build(**spec["params"])
+        _namespace_materials(groups, prefix)
+        rock = _merge(groups, prefix)
+        _translate([rock], spec["x"], 0.0, spec["z"])
+        cx, cz = _centroid_xz(rock)
+        ty = _nearest_terrain_y(tverts, cx, cz)
+        _translate([rock], 0.0, ty, 0.0)
+        scene.append(rock)
 
     return scene
 
