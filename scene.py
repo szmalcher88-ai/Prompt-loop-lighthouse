@@ -35,25 +35,33 @@ LIGHTHOUSE_EMBED = 0.8
 
 # Domy o zroznicowanych parametrach rozstawione wzdluz wybrzeza w dwoch rzedach
 # (z=9 / z=15) tak, aby ich AABB w XZ byly rozlaczne miedzy soba i z latarnia.
+# Kazda instancja rozni sie wymiarami ORAZ kolorami (sciany + dach + szyby) —
+# przygotowanie pod asercje v2 "domy parami rozne" (check_scene).
 HOUSES = [
     {"x": -18.0, "z": 9.0,
      "params": {"width": 5.0, "depth": 4.0, "height": 2.6,
-                "wall_color": (0.85, 0.80, 0.70), "seed": 11}},
+                "wall_color": (0.85, 0.80, 0.70), "roof_color": (0.55, 0.20, 0.15),
+                "window_color": (0.52, 0.68, 0.80), "seed": 11}},
     {"x": -10.0, "z": 15.0,
      "params": {"width": 6.0, "depth": 5.0, "height": 3.0,
-                "wall_color": (0.72, 0.62, 0.52), "seed": 12}},
+                "wall_color": (0.72, 0.62, 0.52), "roof_color": (0.40, 0.28, 0.22),
+                "window_color": (0.58, 0.72, 0.82), "seed": 12}},
     {"x": -2.0, "z": 9.0,
      "params": {"width": 5.5, "depth": 4.5, "height": 2.8,
-                "wall_color": (0.68, 0.74, 0.80), "seed": 13}},
+                "wall_color": (0.68, 0.74, 0.80), "roof_color": (0.30, 0.36, 0.40),
+                "window_color": (0.50, 0.66, 0.78), "seed": 13}},
     {"x": 6.0, "z": 15.0,
      "params": {"width": 6.5, "depth": 5.0, "height": 3.2,
-                "wall_color": (0.82, 0.56, 0.46), "seed": 14}},
+                "wall_color": (0.82, 0.56, 0.46), "roof_color": (0.48, 0.16, 0.12),
+                "window_color": (0.60, 0.74, 0.84), "seed": 14}},
     {"x": 14.0, "z": 9.0,
      "params": {"width": 5.0, "depth": 5.5, "height": 2.7,
-                "wall_color": (0.60, 0.70, 0.56), "seed": 15}},
+                "wall_color": (0.60, 0.70, 0.56), "roof_color": (0.34, 0.30, 0.20),
+                "window_color": (0.54, 0.70, 0.80), "seed": 15}},
     {"x": 20.0, "z": 15.0,
      "params": {"width": 5.0, "depth": 4.0, "height": 3.4,
-                "wall_color": (0.88, 0.84, 0.62), "seed": 16}},
+                "wall_color": (0.88, 0.84, 0.62), "roof_color": (0.58, 0.24, 0.18),
+                "window_color": (0.56, 0.71, 0.83), "seed": 16}},
 ]
 
 
