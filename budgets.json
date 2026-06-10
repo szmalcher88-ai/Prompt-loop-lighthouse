@@ -1,0 +1,11 @@
+{
+  "parts": {
+    "default":    {"max_vertices": 20000, "max_faces": 40000},
+    "terrain":    {"max_vertices": 20000, "max_faces": 40000},
+    "water":      {"max_vertices": 2000,  "max_faces": 4000},
+    "lighthouse": {"max_vertices": 5000,  "max_faces": 10000},
+    "house":      {"max_vertices": 2000,  "max_faces": 4000},
+    "pier":       {"max_vertices": 3000,  "max_faces": 6000}
+  },
+  "scene": {"max_vertices": 80000, "max_faces": 100000}
+}
