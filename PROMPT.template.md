@@ -4,21 +4,26 @@
 
 # Kontekst projektu
 
-Projekt: proceduralny generator modelu 3D latarni morskiej w czystym Pythonie
-(stdlib-only, Python >= 3.9). Cała logika modelu mieszka w JEDNYM pliku
-`lighthouse.py` w korzeniu repo; uruchomiony przez `python lighthouse.py`
-zapisuje model Wavefront OBJ (i ewentualnie MTL) do katalogu `out/`
-(twórz go, jest w .gitignore). Układ współrzędnych: Y-up, jednostki ~metry,
-oś wieży w (x=0, z=0). Części modelu jako nazwane grupy `o` w OBJ.
+Projekt: proceduralne miasteczko nad morzem z latarnią — scena 3D w formacie
+Wavefront OBJ/MTL, generowana czystym Pythonem (stdlib-only, Python >= 3.9).
+Architektura: moduły części w `parts/` (kontrakt: `parts/README.md` —
+PRZECZYTAJ; build(**params) -> lista grup, deterministycznie, zero I/O)
++ assembler `scene.py` w korzeniu, który scala części i zapisuje
+`out/town.obj` + `out/town.mtl` (katalog `out/` jest w .gitignore).
+Istnieje też `lighthouse.py` (generator latarni, zapisuje out/lighthouse.obj).
+Układ współrzędnych: Y-up, jednostki ~metry, poziom morza y=0.
 
-Definicja "zrobione": `python scripts/check_lighthouse.py` kończy się kodem 0.
-Ten skrypt to sygnał prawdy — przeczytaj go w całości przed pisaniem kodu
-i traktuj jego asercje jako specyfikację. Możesz uruchamiać `python ...`
-(generator i weryfikator) lokalnie, by się sprawdzić.
+Definicja "zrobione": PEŁNY łańcuch weryfikatorów kończy się kodem 0
+(lista w sekcji zasad poniżej). Weryfikatory w `scripts/` to sygnał prawdy —
+przeczytaj asercje dotyczące Twojego zadania przed pisaniem kodu i traktuj
+je jako specyfikację. Możesz uruchamiać `python ...` lokalnie, by się sprawdzić.
 
-Nie wolno: dodawać zależności spoza stdlib; tworzyć innych plików niż
-`lighthouse.py` i artefakty w `out/`; dotykać `scripts/`, `tests/`, `loop.py`,
-plików konfiguracyjnych i dokumentacji repo.
+Nie wolno: dodawać zależności spoza stdlib (matplotlib jest zarezerwowany
+dla narzędzi weryfikacji w scripts/, NIE dla części); tworzyć JAKICHKOLWIEK
+plików poza `parts/*.py`, `scene.py`, `lighthouse.py` i artefaktami w `out/`
+— w szczególności zero viewerów HTML i innych artefaktów bez pokrycia
+weryfikatorem; dotykać `scripts/`, `tests/`, `loop.py`, `parts/README.md`,
+`LESSONS/`, `budgets.json`, plików konfiguracyjnych i dokumentacji repo.
 
 # Zasady pracy (nie zmieniaj ich interpretacji)
 

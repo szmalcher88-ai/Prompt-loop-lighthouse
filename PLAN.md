@@ -1,8 +1,19 @@
-# Plan zadań pętli — model 3D latarni morskiej
+# Plan zadań pętli — milestone 1: miasteczko nad morzem z latarnią
 
 <!-- Format: jedna linia = jedno zadanie = jeden commit.
      - [ ] otwarte, [x] zrobione (oznacza pętla), [!] eskalowane.
      Ten plik należy do pętli. Agent ma zakaz go dotykać (guard automatyczny). -->
 
+## Milestone 0 — latarnia (zamknięty)
+
 - [x] Utwórz lighthouse.py (czysty Python, stdlib-only), który po `python lighthouse.py` zapisuje out/lighthouse.obj — model 3D latarni morskiej w układzie Y-up z nazwanymi grupami `o`: base (skalisty cokół), tower (cylindryczna wieża zwężająca się ku górze, min. 24 segmenty obwodu), gallery (galeryjka z balustradą pod laterną), lantern (przeszklona laterna), roof (stożkowy dach jako najwyższy punkt modelu), door (drzwi w dolnej części wieży); PRZED pisaniem przeczytaj scripts/check_lighthouse.py i spełnij wszystkie jego asercje geometryczne.
 - [x] Rozszerz lighthouse.py o materiały: generuj dodatkowo out/lighthouse.mtl z co najmniej 3 materiałami (newmtl + kolory Kd, np. biały i czerwony pas, szkło laterny, ciemny dach), w OBJ dodaj `mtllib lighthouse.mtl` oraz `usemtl`, w tym co najmniej 2 naprzemienne materiały pasów na grupie tower — zgodnie z sekcją materiałów w scripts/check_lighthouse.py.
+
+## Milestone 1 — miasteczko
+
+- [ ] Utwórz parts/terrain.py zgodnie z kontraktem parts/README.md: funkcja build(**params) zwraca pas wybrzeża — siatka terenu o zakresie co najmniej 40x40 m w XZ, w większości płaska, z łagodnym wzniesieniem (>= 1 m różnicy wysokości) pod latarnię od strony morza, wysokości w zakresie [-2, 12]; PRZED pisaniem przeczytaj funkcję check_terrain w scripts/check_parts.py i spełnij jej asercje oraz asercje wspólne (determinizm, budżet "terrain" z budgets.json).
+- [ ] Utwórz parts/water.py zgodnie z kontraktem parts/README.md: build(**params) zwraca taflę morza — wszystkie wierzchołki dokładnie na y=0, zakres co najmniej 20x20 m w XZ, rozmiarem przylegająca do terenu z parts/terrain.py; PRZED pisaniem przeczytaj funkcję check_water w scripts/check_parts.py i spełnij jej asercje oraz asercje wspólne (budżet "water").
+- [ ] Refaktor latarni do kontraktu części: utwórz parts/lighthouse.py z build(**params) zwracającym grupy latarni (w tym grupę o nazwie zawierającej "tower", zwężającą się ku górze, wysokość całości 10-200 m — patrz check_lighthouse w scripts/check_parts.py), a lighthouse.py w korzeniu zamień na cienki wrapper, który używa parts/lighthouse.py i zapisuje out/lighthouse.obj + out/lighthouse.mtl DOKŁADNIE tak, by scripts/check_lighthouse.py pozostał zielony BEZ żadnych modyfikacji (te same nazwy grup base/tower/gallery/lantern/roof/door i materiały pasów).
+- [ ] Utwórz parts/house.py zgodnie z kontraktem parts/README.md: build(**params) zwraca parametryczny dom (parametry: wymiary, kolor ścian, seed) o wysokości 2-15 m, z dwuspadowym dachem na materiale o nazwie zawierającej "roof" (centroid dachu powyżej centroidu ścian) i drzwiami na materiale zawierającym "door" sięgającymi podłoża domu; PRZED pisaniem przeczytaj funkcję check_house w scripts/check_parts.py i spełnij jej asercje oraz asercje wspólne (budżet "house").
+- [ ] Utwórz parts/pier.py zgodnie z kontraktem parts/README.md: build(**params) zwraca drewniany pomost na palach wchodzący w morze — większość wierzchołków nad wodą y=0 (deski pomostu), pale sięgające poniżej y=-0.2; PRZED pisaniem przeczytaj funkcję check_pier w scripts/check_parts.py i spełnij jej asercje oraz asercje wspólne (budżet "pier").
+- [ ] Utwórz scene.py — assembler sceny: scala części z parts/ (teren + woda + latarnia na wzniesieniu + 5-7 domów o zróżnicowanych parametrach wzdłuż wybrzeża + pomost wchodzący w morze), przesuwa indeksy, nadaje grupom prefiksy nazw (terrain*, water*, lighthouse*, house_1..house_N, pier*), zapisuje out/town.obj + out/town.mtl (mtllib/usemtl, >= 5 materiałów); wymagania rozmieszczenia przeczytaj w scripts/check_scene.py (latarnia najwyższa, domy posadowione na terenie >= 0 z tolerancją 0.6 m, rozłączne AABB w XZ, budżety sceny) — po tym zadaniu PEŁNY łańcuch verify musi być zielony, w tym scripts/render_test.py.
