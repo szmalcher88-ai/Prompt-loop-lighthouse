@@ -4,13 +4,21 @@
 
 # Kontekst projektu
 
-<!-- WYPEŁNIJ (preflight nie wystartuje, dopóki ten znacznik tu jest):
-     5-15 zdań, które świeży agent MUSI wiedzieć, żeby nie zgadywać:
-     - co to za projekt i jaka jest jego architektura w jednym akapicie
-     - konwencje: styl, nazewnictwo, struktura katalogów, jak pisać testy
-     - definicja "zrobione" dla typowego zadania w tym repo
-     - czego NIE wolno: zależności, których nie dodajemy; moduły, których nie ruszamy
-     Pisz zwięźle — to wchodzi do KAŻDEGO promptu, płacisz za to w każdej iteracji. -->
+Projekt: proceduralny generator modelu 3D latarni morskiej w czystym Pythonie
+(stdlib-only, Python >= 3.9). Cała logika modelu mieszka w JEDNYM pliku
+`lighthouse.py` w korzeniu repo; uruchomiony przez `python lighthouse.py`
+zapisuje model Wavefront OBJ (i ewentualnie MTL) do katalogu `out/`
+(twórz go, jest w .gitignore). Układ współrzędnych: Y-up, jednostki ~metry,
+oś wieży w (x=0, z=0). Części modelu jako nazwane grupy `o` w OBJ.
+
+Definicja "zrobione": `python scripts/check_lighthouse.py` kończy się kodem 0.
+Ten skrypt to sygnał prawdy — przeczytaj go w całości przed pisaniem kodu
+i traktuj jego asercje jako specyfikację. Możesz uruchamiać `python ...`
+(generator i weryfikator) lokalnie, by się sprawdzić.
+
+Nie wolno: dodawać zależności spoza stdlib; tworzyć innych plików niż
+`lighthouse.py` i artefakty w `out/`; dotykać `scripts/`, `tests/`, `loop.py`,
+plików konfiguracyjnych i dokumentacji repo.
 
 # Zasady pracy (nie zmieniaj ich interpretacji)
 

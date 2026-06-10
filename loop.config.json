@@ -1,0 +1,25 @@
+{
+  "repo_dir": ".",
+  "plan_file": "PLAN.md",
+  "prompt_template": "PROMPT.template.md",
+  "state_dir": ".loop",
+
+  "agent_command": "claude -p --permission-mode acceptEdits --allowedTools \"Bash(python:*)\"",
+
+  "verify_commands": [
+    ["python", "-m", "compileall", "-q", "."],
+    ["python", "scripts/check_lighthouse.py"]
+  ],
+
+  "max_iterations": 8,
+  "max_retries_per_task": 3,
+  "max_wall_seconds": 5400,
+  "agent_timeout_seconds": 1200,
+  "verify_timeout_seconds": 180,
+
+  "protected_paths": ["tests/", "scripts/", ".github/", "loop.py", "loop.config.json", "PROMPT.template.md", "README.md", "INSTRUKCJE-KOLEJNA-SESJA.md", "ROZBIEZNOSCI.md"],
+  "max_diff_lines": 600,
+
+  "feedback_tail_chars": 4000,
+  "on_escalation": "stop"
+}
