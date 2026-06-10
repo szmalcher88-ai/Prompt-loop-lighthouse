@@ -64,6 +64,21 @@ HOUSES = [
                 "window_color": (0.56, 0.71, 0.83), "seed": 16}},
 ]
 
+# Lodki na tafli morza (czesc parts/boat.py). Pomost (os x=0) ma srodek w XZ
+# okolo (0, -19) po przesunieciu o z=-26. boat_1 cumuje tuz przy pomoscie
+# (< 6 m od jego srodka), boat_2 dryfuje na otwartej wodzie (> 10 m od pomostu).
+# Kazda instancja rozni sie wymiarami, kolorem i seedem (zakaz idealnych kopii).
+BOATS = [
+    {"x": 2.6, "z": -18.0,
+     "params": {"length": 3.6, "beam": 1.35, "depth": 0.26, "gunwale_y": 0.42,
+                "hull_color": (0.60, 0.28, 0.18), "seat_color": (0.72, 0.60, 0.40),
+                "seats": 2, "seed": 21}},
+    {"x": -13.0, "z": -31.0,
+     "params": {"length": 4.4, "beam": 1.7, "depth": 0.34, "gunwale_y": 0.50,
+                "hull_color": (0.30, 0.40, 0.52), "seat_color": (0.66, 0.56, 0.42),
+                "seats": 3, "seed": 22}},
+]
+
 
 def _load_part(stem):
     path = PARTS / (stem + ".py")
@@ -164,6 +179,17 @@ def assemble():
     for g in pier:
         g["name"] = "pier_" + g["name"]
     scene.extend(pier)
+
+    # --- lodki: scalone w pojedyncze grupy boat_i, ploa na tafli (bez prze-
+    # suniecia w Y — kadlub ma juz kil pod y=0 i burty nad woda). ---
+    boat_mod = _load_part("boat")
+    for i, spec in enumerate(BOATS, start=1):
+        prefix = "boat_%d" % i
+        groups = boat_mod.build(**spec["params"])
+        _namespace_materials(groups, prefix)
+        boat = _merge(groups, prefix)
+        _translate([boat], spec["x"], 0.0, spec["z"])
+        scene.append(boat)
 
     return scene
 
