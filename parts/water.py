@@ -43,3 +43,5 @@ def build(**params):
         },
     }
     return [group]
+
+CONTRACT_VERSION = 1

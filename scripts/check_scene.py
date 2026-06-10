@@ -46,11 +46,14 @@ def parse_obj(path):
             verts.append(tuple(float(c) for c in parts[1:4]))
         elif tag in ("o", "g"):
             current = parts[1] if len(parts) > 1 else ""
-            groups.setdefault(current, {"verts": set(), "faces": 0})
+            groups.setdefault(current, {"verts": set(), "faces": 0, "mats": set()})
         elif tag == "mtllib":
             mtllib = parts[1] if len(parts) > 1 else ""
         elif tag == "usemtl":
-            usemtl_all.add(parts[1] if len(parts) > 1 else "")
+            m = parts[1] if len(parts) > 1 else ""
+            usemtl_all.add(m)
+            if current is not None:
+                groups[current]["mats"].add(m)
         elif tag == "f":
             idxs = []
             ok = True
@@ -71,9 +74,18 @@ def parse_obj(path):
     return verts, groups, mtllib, usemtl_all
 
 
+def scene_version():
+    """SCENE_VERSION z scene.py (deklaracja wersji kontraktu sceny)."""
+    import re
+    m = re.search(r"^SCENE_VERSION\s*=\s*(\d+)", SCENE.read_text(encoding="utf-8"),
+                  re.MULTILINE)
+    return int(m.group(1)) if m else 1
+
+
 def main():
     if len(sys.argv) > 1:
         obj = Path(sys.argv[1])
+        version = int(sys.argv[2]) if len(sys.argv) > 2 else 1
         if not obj.exists():
             print("FAIL: %s nie istnieje" % obj)
             return 1
@@ -93,6 +105,7 @@ def main():
         if not obj.exists():
             print("FAIL: scene.py nie utworzył out/town.obj")
             return 1
+        version = scene_version()
 
     verts, groups, mtllib, usemtl_all = parse_obj(obj)
 
@@ -171,6 +184,77 @@ def main():
             if ox > TOL and oz > TOL:
                 err("kolizja AABB w XZ: %s nachodzi na %s (%.2f x %.2f m)"
                     % (a, b, ox, oz))
+
+    # ----- zaostrzenia v2 (aktywne od SCENE_VERSION >= 2) -----
+    if version >= 2:
+        def center_xz(group_map):
+            vs = verts_of(group_map)
+            return (sum(v[0] for v in vs) / len(vs), sum(v[2] for v in vs) / len(vs))
+
+        def dist_xz(a, b):
+            return math.hypot(a[0] - b[0], a[1] - b[1])
+
+        boats = members("boat")
+        trees = members("tree")
+        rocks = members("rock")
+        paths = members("path")
+        if len(boats) < 2:
+            err("v2: za mało łodzi (%d grup boat* < 2)" % len(boats))
+        else:
+            pc = center_xz(pier)
+            dists = [dist_xz(center_xz({n: g}), pc) for n, g in boats.items()]
+            if min(dists) > 6:
+                err("v2: żadna łódź nie cumuje przy pomoście (najbliższa %.1f m > 6)" % min(dists))
+            if max(dists) < 10:
+                err("v2: brak łodzi na otwartej wodzie (najdalsza %.1f m < 10 od pomostu)" % max(dists))
+        if len(trees) < 6:
+            err("v2: za mało drzew (%d grup tree* < 6)" % len(trees))
+        if len(rocks) < 10:
+            err("v2: za mało głazów (%d grup rock* < 10)" % len(rocks))
+        if not paths:
+            err("v2: brak ścieżki (grupy path*)")
+        else:
+            pv = verts_of(paths)
+            d_pier = min(dist_xz((a[0], a[2]), (b[0], b[2]))
+                         for a in pv for b in verts_of(pier))
+            d_lh = min(dist_xz((a[0], a[2]), (b[0], b[2]))
+                       for a in pv for b in lhv)
+            if d_pier > 5:
+                err("v2: ścieżka nie dochodzi do rejonu pomostu (%.1f m > 5)" % d_pier)
+            if d_lh > 5:
+                err("v2: ścieżka nie dochodzi do rejonu latarni (%.1f m > 5)" % d_lh)
+            for i, v in enumerate(pv):
+                if abs(v[1] - nearest_terrain_y(v[0], v[2])) > 0.5:
+                    err("v2: ścieżka lewituje/zakopana względem terenu (np. %r)" % (v,))
+                    break
+
+        # domy parami różne (anty-kopiuj-wklej): wymiary AABB albo materiały
+        sigs = {}
+        for hname, g in sorted(houses.items()):
+            hv = [verts[i] for i in g["verts"]]
+            dims = tuple(round(max(c[a] for c in hv) - min(c[a] for c in hv), 1)
+                         for a in (0, 1, 2))
+            mats = frozenset(m.split("_")[-1] for m in g["mats"])
+            sigs[hname] = (dims, mats)
+        names_h = sorted(sigs)
+        for i, a in enumerate(names_h):
+            for b in names_h[i + 1:]:
+                if sigs[a][0] == sigs[b][0] and sigs[a][1] == sigs[b][1]:
+                    err("v2: %s i %s są identyczne (wymiary %s i te same materiały)"
+                        % (a, b, sigs[a][0]))
+
+        # pomost: styk z plażą i zasięg w morze
+        land = [v for v in tverts if v[1] > 0.05]
+        if land:
+            pverts = verts_of(pier)
+            d_land = [min(math.hypot(p[0] - t[0], p[2] - t[2]) for t in land)
+                      for p in pverts]
+            if min(d_land) > 2.0:
+                err("v2: pomost nie styka się z lądem/plażą (najbliżej %.1f m > 2)" % min(d_land))
+            if max(d_land) < 8.0:
+                err("v2: pomost nie sięga >= 8 m w morze (max odległość od lądu %.1f m)" % max(d_land))
+        else:
+            err("v2: teren nie ma lądu (brak wierzchołków y > 0.05)")
 
     # budżety sceny
     budget = json.loads(BUDGETS.read_text(encoding="utf-8"))["scene"]

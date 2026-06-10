@@ -7,13 +7,15 @@ w ogóle się renderuje i materiały weszły, oraz produkujemy podgląd dla
 człowieka (out/renders/*.png — materiał na bramę milestone'u).
 
 Kontrakt warunkowy: scene.py nie istnieje -> exit 0 (zielony baseline).
-Tryb testowy: python scripts/render_test.py <ścieżka.obj> [katalog_wyjściowy]
+Wersjonowanie (parts/README.md): zaostrzenia aktywne od SCENE_VERSION >= 2.
+Tryb testowy: python scripts/render_test.py <obj> [katalog_wyjściowy] [wersja]
 
 Kontrole twarde:
   * trzy STAŁE kamery (panorama od morza / izometryczna / profil sylwetki),
-    stała rozdzielczość 800x600 @ dpi 100,
+    stała rozdzielczość 800x600 @ dpi 100, stały zoom kadru,
   * obraz niepusty: > 0.5% pikseli różnych od tła,
-  * materiały weszły: >= 10 unikalnych kolorów na renderze,
+  * materiały weszły: >= 10 unikalnych kolorów (v2: >= 40 — jitter barw),
+  * v2: wypełnienie kadru panoramy 25-65% pikseli nie-tła,
   * determinizm: dwa rendery tej samej kamery dają IDENTYCZNE bajty PNG.
 
 matplotlib (Agg) jest dozwolony WYŁĄCZNIE w narzędziach weryfikacji.
@@ -33,7 +35,7 @@ ROOT = Path(__file__).resolve().parent.parent
 SCENE = ROOT / "scene.py"
 
 CAMERAS = [
-    ("panorama", 8, -90),   # od strony morza
+    ("panorama", 16, -90),  # od strony morza
     ("iso", 30, 45),        # izometryczny
     ("profile", 0, 0),      # profil sylwetki
 ]
@@ -81,6 +83,7 @@ def parse(obj_path):
 def render_bytes(tris, cols, elev, azim):
     fig = plt.figure(figsize=FIGSIZE, dpi=DPI)
     ax = fig.add_subplot(projection="3d")
+    ax.set_position((0.0, 0.0, 1.0, 1.0))  # pełny kadr, bez marginesów osi
     fig.patch.set_facecolor(BACKGROUND)
     ax.set_facecolor(BACKGROUND)
     if tris:
@@ -104,7 +107,8 @@ def render_bytes(tris, cols, elev, azim):
         ax.set_xlim(x0, x1)
         ax.set_ylim(z0, z1)
         ax.set_zlim(y0, y1)
-        ax.set_box_aspect((max(x1 - x0, 1e-9), max(z1 - z0, 1e-9), max(y1 - y0, 1e-9)))
+        ax.set_box_aspect((max(x1 - x0, 1e-9), max(z1 - z0, 1e-9), max(y1 - y0, 1e-9)),
+                          zoom=2.8)
     ax.view_init(elev=elev, azim=azim)
     ax.set_axis_off()
     buf = io.BytesIO()
@@ -114,7 +118,7 @@ def render_bytes(tris, cols, elev, azim):
     return buf.getvalue()
 
 
-def pixel_checks(name, png_bytes, errors):
+def pixel_checks(name, png_bytes, errors, version=1):
     img = plt.imread(io.BytesIO(png_bytes))  # float 0..1, HxWx4
     rgb = (img[:, :, :3] * 255).astype(np.uint8)
     bg = np.array([round(c * 255) for c in BACKGROUND], dtype=np.uint8)
@@ -123,15 +127,20 @@ def pixel_checks(name, png_bytes, errors):
         errors.append("%s: render pusty (%.2f%% pikseli nie-tła < 0.5%%)"
                       % (name, non_bg * 100))
     uniq = len(np.unique(rgb.reshape(-1, 3), axis=0))
-    if uniq < 10:
-        errors.append("%s: za mało kolorów (%d < 10) — materiały nie weszły?"
-                      % (name, uniq))
+    min_colors = 40 if version >= 2 else 10
+    if uniq < min_colors:
+        errors.append("%s: za mało kolorów (%d < %d) — materiały/jitter nie weszły?"
+                      % (name, uniq, min_colors))
+    if version >= 2 and name == "panorama" and not (0.25 <= non_bg <= 0.65):
+        errors.append("panorama: wypełnienie kadru %.1f%% poza pasmem 25-65%% "
+                      "(scena ma wypełniać kadr)" % (non_bg * 100))
 
 
 def main():
     if len(sys.argv) > 1:
         obj = Path(sys.argv[1])
         out_dir = Path(sys.argv[2]) if len(sys.argv) > 2 else obj.parent / "renders"
+        version = int(sys.argv[3]) if len(sys.argv) > 3 else 1
         if not obj.exists():
             print("FAIL: %s nie istnieje" % obj)
             return 1
@@ -144,6 +153,10 @@ def main():
         if not obj.exists():
             print("FAIL: brak out/town.obj (uruchom scene.py / check_scene)")
             return 1
+        import re
+        m = re.search(r"^SCENE_VERSION\s*=\s*(\d+)", SCENE.read_text(encoding="utf-8"),
+                      re.MULTILINE)
+        version = int(m.group(1)) if m else 1
 
     tris, cols = parse(obj)
     errors = []
@@ -155,7 +168,7 @@ def main():
             png2 = render_bytes(tris, cols, elev, azim)
             if png != png2:
                 errors.append("NIEDETERMINIZM: dwa rendery kamery %r różnią się bajtami" % name)
-        pixel_checks(name, png, errors)
+        pixel_checks(name, png, errors, version)
         (out_dir / (name + ".png")).write_bytes(png)
 
     if errors:

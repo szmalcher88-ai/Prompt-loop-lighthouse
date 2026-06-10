@@ -1,0 +1,290 @@
+newmtl terrain_grass
+Kd 0.350 0.500 0.280
+
+newmtl terrain_sand
+Kd 0.800 0.720 0.500
+
+newmtl terrain_seabed
+Kd 0.250 0.350 0.400
+
+newmtl water_sea
+Kd 0.200 0.380 0.620
+
+newmtl lighthouse_tower_stone_a
+Kd 0.850 0.850 0.800
+
+newmtl lighthouse_tower_stone_b
+Kd 0.750 0.200 0.180
+
+newmtl house_1_foundation
+Kd 0.450 0.450 0.450
+
+newmtl house_1_wall_0
+Kd 0.850 0.780 0.620
+
+newmtl house_1_wall_1
+Kd 0.820 0.750 0.590
+
+newmtl house_1_roof_0
+Kd 0.550 0.200 0.150
+
+newmtl house_1_roof_1
+Kd 0.520 0.180 0.140
+
+newmtl house_1_door
+Kd 0.350 0.220 0.120
+
+newmtl house_1_frame
+Kd 0.950 0.950 0.900
+
+newmtl house_1_glass
+Kd 0.550 0.700 0.850
+
+newmtl house_1_chimney
+Kd 0.500 0.300 0.250
+
+newmtl house_2_foundation
+Kd 0.450 0.450 0.450
+
+newmtl house_2_wall_0
+Kd 0.850 0.780 0.620
+
+newmtl house_2_wall_1
+Kd 0.820 0.750 0.590
+
+newmtl house_2_roof_0
+Kd 0.550 0.200 0.150
+
+newmtl house_2_roof_1
+Kd 0.520 0.180 0.140
+
+newmtl house_2_door
+Kd 0.350 0.220 0.120
+
+newmtl house_2_frame
+Kd 0.950 0.950 0.900
+
+newmtl house_2_glass
+Kd 0.550 0.700 0.850
+
+newmtl house_2_chimney
+Kd 0.500 0.300 0.250
+
+newmtl house_3_foundation
+Kd 0.450 0.450 0.450
+
+newmtl house_3_wall_0
+Kd 0.850 0.780 0.620
+
+newmtl house_3_wall_1
+Kd 0.820 0.750 0.590
+
+newmtl house_3_roof_0
+Kd 0.550 0.200 0.150
+
+newmtl house_3_roof_1
+Kd 0.520 0.180 0.140
+
+newmtl house_3_door
+Kd 0.350 0.220 0.120
+
+newmtl house_3_frame
+Kd 0.950 0.950 0.900
+
+newmtl house_3_glass
+Kd 0.550 0.700 0.850
+
+newmtl house_3_chimney
+Kd 0.500 0.300 0.250
+
+newmtl house_4_foundation
+Kd 0.450 0.450 0.450
+
+newmtl house_4_wall_0
+Kd 0.850 0.780 0.620
+
+newmtl house_4_wall_1
+Kd 0.820 0.750 0.590
+
+newmtl house_4_roof_0
+Kd 0.550 0.200 0.150
+
+newmtl house_4_roof_1
+Kd 0.520 0.180 0.140
+
+newmtl house_4_door
+Kd 0.350 0.220 0.120
+
+newmtl house_4_frame
+Kd 0.950 0.950 0.900
+
+newmtl house_4_glass
+Kd 0.550 0.700 0.850
+
+newmtl house_4_chimney
+Kd 0.500 0.300 0.250
+
+newmtl house_5_foundation
+Kd 0.450 0.450 0.450
+
+newmtl house_5_wall_0
+Kd 0.850 0.780 0.620
+
+newmtl house_5_wall_1
+Kd 0.820 0.750 0.590
+
+newmtl house_5_roof_0
+Kd 0.550 0.200 0.150
+
+newmtl house_5_roof_1
+Kd 0.520 0.180 0.140
+
+newmtl house_5_door
+Kd 0.350 0.220 0.120
+
+newmtl house_5_frame
+Kd 0.950 0.950 0.900
+
+newmtl house_5_glass
+Kd 0.550 0.700 0.850
+
+newmtl house_5_chimney
+Kd 0.500 0.300 0.250
+
+newmtl pier_1_plank_0
+Kd 0.550 0.400 0.250
+
+newmtl pier_1_plank_1
+Kd 0.500 0.360 0.220
+
+newmtl pier_1_pile
+Kd 0.350 0.250 0.150
+
+newmtl pier_1_rail_post
+Kd 0.450 0.320 0.200
+
+newmtl pier_1_rail_top
+Kd 0.400 0.280 0.180
+
+newmtl pier_1_bollard
+Kd 0.300 0.220 0.140
+
+newmtl tree_1_trunk
+Kd 0.400 0.280 0.160
+
+newmtl tree_1_leaves_0
+Kd 0.120 0.350 0.180
+
+newmtl tree_1_leaves_1
+Kd 0.100 0.320 0.160
+
+newmtl tree_2_trunk
+Kd 0.400 0.280 0.160
+
+newmtl tree_2_leaves_0
+Kd 0.120 0.350 0.180
+
+newmtl tree_2_leaves_1
+Kd 0.100 0.320 0.160
+
+newmtl tree_3_trunk
+Kd 0.400 0.280 0.160
+
+newmtl tree_3_leaves_0
+Kd 0.120 0.350 0.180
+
+newmtl tree_3_leaves_1
+Kd 0.100 0.320 0.160
+
+newmtl tree_4_trunk
+Kd 0.400 0.280 0.160
+
+newmtl tree_4_leaves_0
+Kd 0.120 0.350 0.180
+
+newmtl tree_4_leaves_1
+Kd 0.100 0.320 0.160
+
+newmtl tree_5_trunk
+Kd 0.400 0.280 0.160
+
+newmtl tree_5_leaves_0
+Kd 0.120 0.350 0.180
+
+newmtl tree_5_leaves_1
+Kd 0.100 0.320 0.160
+
+newmtl tree_6_trunk
+Kd 0.400 0.280 0.160
+
+newmtl tree_6_leaves_0
+Kd 0.120 0.350 0.180
+
+newmtl tree_6_leaves_1
+Kd 0.100 0.320 0.160
+
+newmtl rock_1_rock_0
+Kd 0.450 0.440 0.420
+
+newmtl rock_1_rock_1
+Kd 0.500 0.490 0.460
+
+newmtl rock_2_rock_0
+Kd 0.450 0.440 0.420
+
+newmtl rock_2_rock_1
+Kd 0.500 0.490 0.460
+
+newmtl rock_3_rock_0
+Kd 0.450 0.440 0.420
+
+newmtl rock_3_rock_1
+Kd 0.500 0.490 0.460
+
+newmtl rock_4_rock_0
+Kd 0.450 0.440 0.420
+
+newmtl rock_4_rock_1
+Kd 0.500 0.490 0.460
+
+newmtl rock_5_rock_0
+Kd 0.450 0.440 0.420
+
+newmtl rock_5_rock_1
+Kd 0.500 0.490 0.460
+
+newmtl rock_6_rock_0
+Kd 0.450 0.440 0.420
+
+newmtl rock_6_rock_1
+Kd 0.500 0.490 0.460
+
+newmtl rock_7_rock_0
+Kd 0.450 0.440 0.420
+
+newmtl rock_7_rock_1
+Kd 0.500 0.490 0.460
+
+newmtl rock_8_rock_0
+Kd 0.450 0.440 0.420
+
+newmtl rock_8_rock_1
+Kd 0.500 0.490 0.460
+
+newmtl rock_9_rock_0
+Kd 0.450 0.440 0.420
+
+newmtl rock_9_rock_1
+Kd 0.500 0.490 0.460
+
+newmtl rock_10_rock_0
+Kd 0.450 0.440 0.420
+
+newmtl rock_10_rock_1
+Kd 0.500 0.490 0.460
+
+newmtl path_1_path_0
+Kd 0.620 0.580 0.500
+
+newmtl path_1_path_1
+Kd 0.580 0.540 0.470

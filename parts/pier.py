@@ -108,3 +108,5 @@ def build(**params):
     groups.append(piles)
 
     return groups
+
+CONTRACT_VERSION = 1

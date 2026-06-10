@@ -31,3 +31,24 @@ Reguły twarde:
 
 Weryfikacja: `python scripts/check_parts.py` (asercje wspólne + specyficzne
 per typ części — przeczytaj przed pisaniem części).
+
+## Wersjonowany kontrakt (zaostrzanie prawdy bez łamania baseline'u)
+
+Każdy moduł części deklaruje stałą modułową `CONTRACT_VERSION = N`
+(scene.py analogicznie `SCENE_VERSION = N`). Zaostrzone asercje checkerów
+aktywują się wyłącznie dla `CONTRACT_VERSION >= 2` (odpowiednio
+`SCENE_VERSION >= 2`). Zadanie "podnieś wersję" = podnieś stałą i spełnij
+zaostrzony kontrakt; dzięki temu baseline i wszystkie stany pośrednie planu
+pozostają zielone, a prawda twardnieje commit po commicie. Wzorzec
+obowiązuje w każdej rundzie rozwoju.
+
+## Wymogi przekrojowe realizmu (obowiązują wszystkie części i scenę)
+
+- **Deterministyczny jitter kolorów per ścianka**: subtelna wariacja barwy
+  między ściankami tej samej powierzchni (seed wyprowadzony z parametrów;
+  żadnych dwóch identycznych płaszczyzn obok siebie). Realizowane przez
+  dodatkowe materiały-odcienie (np. `wall_0`, `wall_1`, `wall_2`).
+- **Lekkie nieregularności rozmieszczenia** (poziom sceny): obroty domów
+  ±10°, niejednakowe odstępy między instancjami.
+- **Zakaz idealnych powtórzeń instancji**: każda instancja części w scenie
+  różni się parametrami (wymiary, kolor, seed) od pozostałych.

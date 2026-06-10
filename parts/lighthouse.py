@@ -168,3 +168,5 @@ def build(**params):
     groups.append(door)
 
     return groups
+
+CONTRACT_VERSION = 1
