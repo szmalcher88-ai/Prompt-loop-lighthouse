@@ -138,6 +138,22 @@ ROCKS = [
 ]
 
 
+# Sciezka piesza (czesc parts/path.py). Trasa (wezly XZ) wiedzie od ladowego
+# konca pomostu (os x=0, z~-12) przez rejon miasteczka (domy w rzedach z=9/z=15)
+# z powrotem do rejonu latarni na klifie (os 0, 0). Assembler dopasowuje
+# wysokosc kazdego wierzcholka wstegi do terenu (min odleglosc od najblizszego
+# wierzcholka terenu), wiec sciezka przylega do zbocza klifu i plazy. Grupa path.
+PATH_ROUTE = [
+    (0.0, -11.0),    # rejon pomostu (ladowy koniec, z~-12)
+    (-2.0, -4.0),
+    (-8.0, 4.0),     # wejscie w miasteczko od lewej
+    (-6.0, 11.0),    # pomiedzy rzedami domow
+    (2.0, 13.0),     # przejscie przez miasteczko
+    (5.0, 6.0),
+    (2.0, 1.0),      # rejon latarni (os 0, 0)
+]
+
+
 def _load_part(stem):
     path = PARTS / (stem + ".py")
     spec = importlib.util.spec_from_file_location("_part_" + stem, path)
@@ -278,6 +294,18 @@ def assemble():
         _translate([rock], 0.0, ty, 0.0)
         scene.append(rock)
 
+    # --- sciezka: wstega od rejonu pomostu przez miasteczko do latarni.
+    # Wysokosc kazdego wierzcholka dopasowana do terenu (Y = wysokosc
+    # najblizszego wierzcholka terenu + drobny luz), wiec sciezka przylega do
+    # zbocza i plazy zamiast lewitowac (sekcja sciezki w check_scene v2). ---
+    path = _load_part("path").build(waypoints=PATH_ROUTE, width=1.8, seed=61)
+    _namespace_materials(path, "path")
+    for g in path:
+        g["name"] = "path"
+        g["vertices"] = [(x, _nearest_terrain_y(tverts, x, z) + 0.05, z)
+                         for (x, y, z) in g["vertices"]]
+    scene.extend(path)
+
     return scene
 
 
@@ -343,4 +371,4 @@ def main():
 if __name__ == "__main__":
     main()
 
-SCENE_VERSION = 1
+SCENE_VERSION = 2
