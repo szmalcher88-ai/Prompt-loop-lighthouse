@@ -103,6 +103,37 @@ BOATS = [
                 "seats": 3, "seed": 22}},
 ]
 
+# Pomost zatoczki (parts/pier.py v3) jako dwa wspolliniowe przesla wzdluz osi
+# x=0. Czesc buduje przeslo lokalne z=0 (morski koniec, polery) .. z=length
+# (ladowy koniec); dz przesuwa je w scene. pier_1 to segment ladowy (dz=-31 ->
+# z -31..-24), pier_2 morski (dz=-38 -> z -38..-31); razem ciagly poklad
+# z -38..-24, identyczny zasieg jak pojedynczy pomost (boaty cumuja wzgledem
+# srodka ~ (0, -31)).
+PIERS = [
+    {"dz": -31.0, "params": {"length": 7.0, "bays": 4, "seed": 51}},
+    {"dz": -38.0, "params": {"length": 7.0, "bays": 4, "seed": 52}},
+]
+
+# Gorna powierzchnia pokladu pomostu nad tafla (deck_y=0.4 w parts/pier.py);
+# rekwizyty stawiamy podstawa na tej wysokosci.
+DECK_TOP = 0.4
+
+# Beczki (parts/prop_barrel.py) i skrzynie (parts/prop_crate.py) rozstawione na
+# pokladzie obu przesel (x w obrysie +-1.2, z wzdluz pomostu). Kazda instancja
+# ma inny seed i wymiary (zakaz idealnych kopii); leza w obrysie pomostu, wiec
+# <= 5 m od niego (check_scene v3: pomost albo nabrzeze).
+BARRELS = [
+    {"x": -0.9, "z": -25.5, "params": {"seed": 201, "height": 0.9, "radius": 0.32}},
+    {"x": 0.9, "z": -26.5, "params": {"seed": 202, "height": 1.0, "radius": 0.30}},
+    {"x": -0.8, "z": -36.0, "params": {"seed": 203, "height": 0.85, "radius": 0.33}},
+    {"x": 0.85, "z": -34.5, "params": {"seed": 204, "height": 0.95, "radius": 0.34}},
+]
+CRATES = [
+    {"x": 0.75, "z": -24.5, "params": {"seed": 211, "width": 0.7, "depth": 0.7, "height": 0.7}},
+    {"x": -0.75, "z": -30.5, "params": {"seed": 212, "width": 0.6, "depth": 0.8, "height": 0.6}},
+    {"x": 0.6, "z": -37.0, "params": {"seed": 213, "width": 0.8, "depth": 0.6, "height": 0.75}},
+]
+
 # Zagajnik sosen na tarasie dolnym wyspy (czesc parts/tree.py). Domy stoja na
 # tarasie srodkowym (r=0.52), wiec sosny sadzimy nieco nizej (r=0.65 -> teren
 # y=2.5) na luku od strony lądu, z dala od zatoczki. Kazda sosna ma inna
@@ -292,19 +323,44 @@ def assemble():
         _translate([house], 0.0, ty, 0.0)
         scene.append(house)
 
-    # --- pomost: z plazy zatoczki (-Z) POZA obrys wyspy w otwarte morze ---
+    # --- pomosty: dwa wspolliniowe segmenty (pier_1, pier_2) z plazy zatoczki
+    # (-Z) POZA obrys wyspy w otwarte morze ---
     # Teren (terrain v3) to wyspa; zatoczka z plaza otwiera sie ku -Z, a plaza
-    # przy osi x=0 siega do z~-28 (r=0.95). Pomost (lokalne z=0..length=14, os
-    # x=0) przesuwamy o -38, by jego ladowy koniec (z=14 -> scena z=-24) lezal
-    # na plazy (<= 2 m od lądu), a morski koniec (z=0 -> scena z=-38) siegal
-    # otwartej wody poza obrysem wyspy (>= 8 m od najblizszego wierzcholka
-    # terenu o y > 0.05). Asercje check_scene v2: styk z plaza ORAZ zasieg w morze.
-    pier = _load_part("pier").build()
-    _namespace_materials(pier, "pier")
-    _translate(pier, 0.0, 0.0, -38.0)
-    for g in pier:
-        g["name"] = "pier_" + g["name"]
-    scene.extend(pier)
+    # przy osi x=0 siega do z~-28 (r=0.95). Pomost dzielimy na dwa wspolliniowe
+    # przesla (os x=0, lokalne z=0..7 kazde): segment ladowy pier_1 (z -31..-24)
+    # styka sie z plaza (ladowy koniec z=-24, <= 2 m od lądu), a segment morski
+    # pier_2 (z -38..-31) siega otwartej wody poza obrysem wyspy (morski koniec
+    # z=-38, >= 8 m od najblizszego wierzcholka terenu o y > 0.05). Razem >= 2
+    # grupy pier* (check_scene v3) i niezmienione asercje v2 (styk + zasieg).
+    pier_mod = _load_part("pier")
+    for i, spec in enumerate(PIERS, start=1):
+        prefix = "pier_%d" % i
+        groups = pier_mod.build(**spec["params"])
+        _namespace_materials(groups, prefix)
+        seg = _merge(groups, prefix)
+        _translate([seg], 0.0, 0.0, spec["dz"])
+        scene.append(seg)
+
+    # --- rekwizyty portowe: beczki (barrel_i) i skrzynie (crate_i) stoja na
+    # pokladzie pomostu (DECK_TOP nad tafla), w obrebie obrysu przesel, wiec
+    # kazdy jest <= 5 m od pomostu (check_scene v3). Kazda instancja rozni sie
+    # wymiarami i seedem (zakaz idealnych kopii). ---
+    barrel_mod = _load_part("prop_barrel")
+    for i, spec in enumerate(BARRELS, start=1):
+        prefix = "barrel_%d" % i
+        groups = barrel_mod.build(**spec["params"])
+        _namespace_materials(groups, prefix)
+        prop = _merge(groups, prefix)
+        _translate([prop], spec["x"], DECK_TOP, spec["z"])
+        scene.append(prop)
+    crate_mod = _load_part("prop_crate")
+    for i, spec in enumerate(CRATES, start=1):
+        prefix = "crate_%d" % i
+        groups = crate_mod.build(**spec["params"])
+        _namespace_materials(groups, prefix)
+        prop = _merge(groups, prefix)
+        _translate([prop], spec["x"], DECK_TOP, spec["z"])
+        scene.append(prop)
 
     # --- lodki: scalone w pojedyncze grupy boat_i, ploa na tafli (bez prze-
     # suniecia w Y — kadlub ma juz kil pod y=0 i burty nad woda). ---

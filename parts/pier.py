@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
-"""Czesc: drewniany pomost na palach wchodzacy w morze (kontrakt v2).
+"""Czesc: drewniany pomost na palach wchodzacy w morze (kontrakt v3).
 
 Kontrakt parts/README.md: build(**params) -> lista grup, deterministycznie,
 zero I/O, czysty stdlib. Uklad Y-up, jednostki ~metry, poziom morza y=0.
 Os pomostu biegnie wzdluz Z (od brzegu z=length do z=0 w glab morza), os
 bryly w x=0.
 
-Konstrukcja (CONTRACT_VERSION = 2, asercje check_parts.check_pier_v2):
+Konstrukcja (CONTRACT_VERSION = 3, asercje check_parts.check_pier_v2 bez zmian):
   * os dluga >= 12 m (domyslna dlugosc 14 m wzdluz Z),
   * pale (material 'pile') wbite w dno w >= 16 kolumnach (8 przesel x 2 boki),
     siegaja ponizej tafli (y < -0.2),
@@ -154,4 +154,4 @@ def build(**params):
 
     return groups
 
-CONTRACT_VERSION = 2
+CONTRACT_VERSION = 3
