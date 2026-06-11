@@ -244,19 +244,21 @@ STAIRS = [
                               "step_width": 1.8, "seed": 73}},
 ]
 
-# Kapliczka i mostek (czesci parts/chapel.py, parts/bridge.py). Kapliczka stoi
-# na turni — wyniesionym plateau przy osi (8, 0), gdzie teren ma y=9 m (>= 3 m
-# pod kapliczka) i jest >= 6 m od najblizszego domu z pierscienia. Mostek linowy
-# biegnie wzdluz +X (srodek w x=13): jego turniowy koniec (x~10) jest <= 5 m od
-# kapliczki, a wioskowy koniec (x~16) <= 6 m od domu przy phi=0 (x~18). Mostek
-# unosimy o lift ponad teren, by zwisajace liny nie zapadaly sie w grunt.
+# Kapliczka i mostek (czesci parts/chapel.py, parts/bridge.py). Kapliczka stoi na
+# osobnej TURNI, ktora terrain.py v3 wyrasta przy (30, -6) — lokalne wzniesienie
+# y~7 m (>= 3 m pod kapliczka), rozlaczne z masywem zabudowy przez przelecz
+# (siodlo terenu ~2.5 m, >= 1.5 m nizej niz konce) i odlegle >= 6 m od
+# najblizszego domu z pierscienia (house_1 przy phi=0, x~18). Mostek linowy
+# biegnie wzdluz +X (srodek w x=22): jego turniowy koniec (x~25) jest <= 5 m od
+# kapliczki (obrys turni od x~28.5), a wioskowy koniec (x~19) <= 6 m od house_1.
+# Mostek unosimy o lift ponad teren, by zwisajace liny nie zapadaly sie w grunt.
 CHAPEL = {
-    "x": 8.0, "z": 0.0,
+    "x": 30.0, "z": -6.0,
     "params": {"seed": 81, "wall_color": (0.88, 0.85, 0.78),
                "roof_color": (0.42, 0.20, 0.15), "cross_color": (0.28, 0.24, 0.20)},
 }
 BRIDGE = {
-    "x": 13.0, "z": 0.0, "rot": 0.0, "lift": 0.7,
+    "x": 22.0, "z": -5.0, "rot": 0.0, "lift": 0.7,
     "params": {"span": 6.0, "half_spread": 0.6, "sag": 0.6, "seed": 91},
 }
 
@@ -589,4 +591,4 @@ def main():
 if __name__ == "__main__":
     main()
 
-SCENE_VERSION = 2
+SCENE_VERSION = 3
