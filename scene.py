@@ -135,13 +135,16 @@ CRATES = [
 ]
 
 # Zagajnik sosen na tarasie dolnym wyspy (czesc parts/tree.py). Domy stoja na
-# tarasie srodkowym (r=0.52), wiec sosny sadzimy nieco nizej (r=0.65 -> teren
-# y=2.5) na luku od strony lądu, z dala od zatoczki. Kazda sosna ma inna
-# wysokosc, promien korony i seed (zakaz idealnych kopii); assembler sadzi ja
-# na terenie (min-Y == wysokosc najblizszego wierzcholka terenu). Grupy tree_i.
+# tarasie srodkowym (r=0.45 -> teren y=5.5); sosny sadzimy o jeden taras nizej,
+# na pierscieniu y=2.5 wyspy (r=0.6..0.75). Po przejsciu terenu na wyspe (v3)
+# zagajnik dosuwamy do r=0.70 i ustawiamy na luku od strony lądu (z > 0), z dala
+# od zatoczki (-Z) oraz od krzewow przydomowych w pierscieniu zabudowy. Kazda
+# sosna ma inna wysokosc, promien korony i seed (zakaz idealnych kopii);
+# assembler sadzi ja na terenie (min-Y == wysokosc najblizszego wierzcholka
+# terenu). Grupy tree_i.
 _TREE_SPOTS = [
-    (0.65, 30.0), (0.65, 55.0), (0.65, 80.0), (0.65, 105.0),
-    (0.65, 130.0), (0.65, 155.0), (0.65, 200.0),
+    (0.70, 25.0), (0.70, 52.0), (0.70, 79.0), (0.70, 106.0),
+    (0.70, 133.0), (0.70, 160.0), (0.70, 175.0),
 ]
 _TREE_PARAMS = [
     {"height": 6.4, "base_radius": 1.5, "layers": 3, "seed": 31},
@@ -154,6 +157,28 @@ _TREE_PARAMS = [
 ]
 TREES = [{"x": _ell(r, phi)[0], "z": _ell(r, phi)[1], "params": p}
          for (r, phi), p in zip(_TREE_SPOTS, _TREE_PARAMS)]
+
+
+# Krzewy przydomowe (czesc parts/bush.py). Sadzimy je w przerwach pierscienia
+# zabudowy (domy co 40 stopni; krzewy w polowie przerw, phi=20+40k) na tym samym
+# tarasie y=5.5 co domy (r=_HOUSE_RING_R). Kazdy krzew lezy ~5 m od dwoch
+# najblizszych domow (<= 10 m od najblizszego — check_scene v3), miedzy zabudowa.
+# Kazda instancja rozni sie wysokoscia, szerokoscia, kolorem i seedem (zakaz
+# idealnych kopii); assembler sadzi ja na terenie (min-Y == wysokosc najblizszego
+# wierzcholka terenu) jak domy/sosny. Grupy bush_1..bush_N.
+_BUSH_PARAMS = [
+    {"height": 1.1, "width": 0.9, "leaf_color": (0.24, 0.42, 0.20), "seed": 301},
+    {"height": 0.8, "width": 1.0, "leaf_color": (0.28, 0.46, 0.22), "seed": 302},
+    {"height": 1.3, "width": 0.85, "leaf_color": (0.20, 0.38, 0.18), "seed": 303},
+    {"height": 0.95, "width": 1.1, "leaf_color": (0.26, 0.44, 0.24), "seed": 304},
+    {"height": 1.15, "width": 0.95, "leaf_color": (0.22, 0.40, 0.19), "seed": 305},
+    {"height": 0.7, "width": 0.8, "leaf_color": (0.30, 0.48, 0.26), "seed": 306},
+    {"height": 1.25, "width": 1.05, "leaf_color": (0.21, 0.39, 0.21), "seed": 307},
+    {"height": 0.9, "width": 0.9, "leaf_color": (0.27, 0.45, 0.23), "seed": 308},
+]
+BUSHES = [{"x": _ell(_HOUSE_RING_R, 20.0 + 40.0 * _k)[0],
+           "z": _ell(_HOUSE_RING_R, 20.0 + 40.0 * _k)[1], "params": _p}
+          for _k, _p in enumerate(_BUSH_PARAMS)]
 
 
 # Glazy wokol wyspy (czesc parts/rocks.py). Otaczaja wyspe pierscieniem tuz przy
@@ -386,6 +411,20 @@ def assemble():
         ty = _nearest_terrain_y(tverts, cx, cz)
         _translate([tree], 0.0, ty, 0.0)
         scene.append(tree)
+
+    # --- krzewy: scalone w pojedyncze grupy bush_i, posadzone na terenie
+    # (jak sosny) w przerwach pierscienia zabudowy. ---
+    bush_mod = _load_part("bush")
+    for i, spec in enumerate(BUSHES, start=1):
+        prefix = "bush_%d" % i
+        groups = bush_mod.build(**spec["params"])
+        _namespace_materials(groups, prefix)
+        bush = _merge(groups, prefix)
+        _translate([bush], spec["x"], 0.0, spec["z"])
+        cx, cz = _centroid_xz(bush)
+        ty = _nearest_terrain_y(tverts, cx, cz)
+        _translate([bush], 0.0, ty, 0.0)
+        scene.append(bush)
 
     # --- glazy: scalone w pojedyncze grupy rock_i, posadowione na terenie
     # (jak drzewa: min-Y == wysokosc najblizszego wierzcholka terenu) wzdluz
