@@ -87,12 +87,20 @@ for _k, _spec in enumerate(_HOUSE_SPECS):
     _x, _z = _ell(_HOUSE_RING_R, _k * 40.0)
     HOUSES.append({"x": _x, "z": _z, "archetype": _spec["archetype"], "params": _spec})
 
-# Lodki na tafli morza (czesc parts/boat.py). Pomost zatoczki (os x=0) wychodzi
-# ku -Z poza obrys wyspy; jego srodek w XZ to okolo (0, -31). boat_1 cumuje tuz
-# przy pomoscie (< 6 m od jego srodka), boat_2 dryfuje na otwartej wodzie po
-# stronie -Z (> 10 m od pomostu). Kazda instancja rozni sie wymiarami, kolorem
-# i seedem (zakaz idealnych kopii).
+# Lodki (czesc parts/boat.py). Trzy role pod uklad wyspy (zatoczka od -Z, pomost
+# w osi x=0 o srodku XZ ~ (0, -31)):
+#   boat_1 — wyciagnieta na PIASEK plazy zatoczki: centroid nad ladem (teren
+#            > 0.05), assembler sadzi ja na terenie (flaga "beach") jak inne
+#            czesci ladowe -> sekcja zatoczki check_scene v3,
+#   boat_2 — cumuje tuz przy pomoscie (< 6 m od jego srodka),
+#   boat_3 — dryfuje na otwartej wodzie po stronie -Z (> 10 m od pomostu).
+# boat_2/boat_3 pokrywaja asercje v2 (styk z pomostem + otwarta woda). Kazda
+# instancja rozni sie wymiarami, kolorem i seedem (zakaz idealnych kopii).
 BOATS = [
+    {"x": -3.0, "z": -24.0, "beach": True,
+     "params": {"length": 3.0, "beam": 1.2, "depth": 0.24, "gunwale_y": 0.40,
+                "hull_color": (0.70, 0.46, 0.24), "seat_color": (0.74, 0.62, 0.42),
+                "seats": 2, "seed": 23}},
     {"x": 3.5, "z": -33.0,
      "params": {"length": 3.6, "beam": 1.35, "depth": 0.26, "gunwale_y": 0.42,
                 "hull_color": (0.60, 0.28, 0.18), "seat_color": (0.72, 0.60, 0.40),
@@ -181,11 +189,14 @@ BUSHES = [{"x": _ell(_HOUSE_RING_R, 20.0 + 40.0 * _k)[0],
           for _k, _p in enumerate(_BUSH_PARAMS)]
 
 
-# Glazy wokol wyspy (czesc parts/rocks.py). Otaczaja wyspe pierscieniem tuz przy
-# linii brzegowej (r=0.98 -> plycizna y=-0.8), wystajac ponad tafle. Kazdy glaz
-# rozni sie promieniem, splaszczeniem, kolorem i seedem (zakaz idealnych kopii);
-# assembler sadzi go na terenie (min-Y == wysokosc najblizszego wierzcholka
-# terenu) jak drzewa/domy. Grupy rock_1..rock_N.
+# Glazy wokol wyspy (czesc parts/rocks.py). Otaczaja wyspe rafowym pierscieniem
+# W WODZIE POZA OBRYSEM wyspy (r=1.05 -> otwarte morze y=-1.8, teren < -0.2 pod
+# kazdym centroidem), wieksze breaching wystaja ponad tafle, mniejsze tworza
+# podwodna rafe. Pierscien (>= 8 glazow w wodzie, lacznie >= 10) pokrywa sekcje
+# pierscienia skal check_scene v3. Kazdy glaz rozni sie promieniem, splaszcze-
+# niem, kolorem i seedem (zakaz idealnych kopii); assembler sadzi go na terenie
+# (min-Y == wysokosc najblizszego wierzcholka terenu) jak drzewa/domy. Grupy
+# rock_1..rock_N.
 _ROCK_PARAMS = [
     {"radius": 1.1, "scale_y": 0.65, "color": (0.52, 0.50, 0.47), "seed": 41},
     {"radius": 0.8, "scale_y": 0.7, "color": (0.46, 0.45, 0.43), "seed": 42},
@@ -200,7 +211,7 @@ _ROCK_PARAMS = [
     {"radius": 1.5, "scale_y": 0.72, "color": (0.54, 0.51, 0.47), "seed": 51},
     {"radius": 1.35, "scale_y": 0.68, "color": (0.46, 0.45, 0.43), "seed": 52},
 ]
-ROCKS = [{"x": _ell(0.98, 30.0 * k)[0], "z": _ell(0.98, 30.0 * k)[1], "params": p}
+ROCKS = [{"x": _ell(1.05, 30.0 * k)[0], "z": _ell(1.05, 30.0 * k)[1], "params": p}
          for k, p in enumerate(_ROCK_PARAMS)]
 
 
@@ -387,8 +398,10 @@ def assemble():
         _translate([prop], spec["x"], DECK_TOP, spec["z"])
         scene.append(prop)
 
-    # --- lodki: scalone w pojedyncze grupy boat_i, ploa na tafli (bez prze-
-    # suniecia w Y — kadlub ma juz kil pod y=0 i burty nad woda). ---
+    # --- lodki: scalone w pojedyncze grupy boat_i. Lodki na wodzie ploa na
+    # tafli (bez przesuniecia w Y — kadlub ma juz kil pod y=0 i burty nad woda);
+    # lodka z flaga "beach" jest wyciagnieta na piasek, wiec assembler sadzi ja
+    # na terenie (przesuwa w Y do wysokosci najblizszego wierzcholka terenu). ---
     boat_mod = _load_part("boat")
     for i, spec in enumerate(BOATS, start=1):
         prefix = "boat_%d" % i
@@ -396,6 +409,9 @@ def assemble():
         _namespace_materials(groups, prefix)
         boat = _merge(groups, prefix)
         _translate([boat], spec["x"], 0.0, spec["z"])
+        if spec.get("beach"):
+            cx, cz = _centroid_xz(boat)
+            _translate([boat], 0.0, _nearest_terrain_y(tverts, cx, cz), 0.0)
         scene.append(boat)
 
     # --- sosny: scalone w pojedyncze grupy tree_i, posadzone na terenie
