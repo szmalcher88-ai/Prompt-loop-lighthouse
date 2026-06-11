@@ -20,6 +20,7 @@ Uklad Y-up, jednostki ~metry, poziom morza y=0. Czysty stdlib.
 """
 
 import importlib.util
+import math
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -29,128 +30,126 @@ PARTS = ROOT / "parts"
 MTL_NAME = "town.mtl"
 OBJ_NAME = "town.obj"
 
+# Geometria wyspy (parts/terrain.py v3): elipsa o polosiach A (X), B (Z).
+# Pozycje na wyspie wyznaczamy po wspolrzednych eliptycznych (r, phi), tak jak
+# wzorzec scripts/fixtures/gen_scene_v3.py: r=0 to os latarni (0,0), r=1 to
+# linia brzegowa. Zatoczka z plaza otwiera sie ku -Z.
+ISLAND_A, ISLAND_B = 40.0, 30.0
+
+
+def _ell(r, phi_deg):
+    """Punkt (x, z) na wyspie: promien r (0..1) i kat phi w stopniach."""
+    a = math.radians(phi_deg)
+    return (ISLAND_A * r * math.cos(a), ISLAND_B * r * math.sin(a))
+
 # O ile cokol latarni zatapia sie w szczycie wzniesienia (estetyka, nie wplywa
 # na to, ze latarnia pozostaje najwyzszym elementem sceny).
 LIGHTHOUSE_EMBED = 0.8
 
-# Domy o zroznicowanych parametrach rozstawione wzdluz wybrzeza w dwoch rzedach
-# (z=9 / z=15) tak, aby ich AABB w XZ byly rozlaczne miedzy soba i z latarnia.
+# Domy o zroznicowanych parametrach rozstawione na tarasie srodkowym wyspy
+# (r=0.52 -> teren y=5.5) pierscieniem wokol latarni, z dala od zatoczki (-Z).
+# Kat phi dobrany tak, aby AABB w XZ byly rozlaczne miedzy soba i z latarnia.
 # Kazda instancja rozni sie wymiarami ORAZ kolorami (sciany + dach + szyby) —
-# przygotowanie pod asercje v2 "domy parami rozne" (check_scene).
-HOUSES = [
-    {"x": -18.0, "z": 9.0,
-     "params": {"width": 5.0, "depth": 4.0, "height": 2.6,
-                "wall_color": (0.85, 0.80, 0.70), "roof_color": (0.55, 0.20, 0.15),
-                "window_color": (0.52, 0.68, 0.80), "seed": 11}},
-    {"x": -10.0, "z": 15.0,
-     "params": {"width": 6.0, "depth": 5.0, "height": 3.0,
-                "wall_color": (0.72, 0.62, 0.52), "roof_color": (0.40, 0.28, 0.22),
-                "window_color": (0.58, 0.72, 0.82), "seed": 12}},
-    {"x": -2.0, "z": 9.0,
-     "params": {"width": 5.5, "depth": 4.5, "height": 2.8,
-                "wall_color": (0.68, 0.74, 0.80), "roof_color": (0.30, 0.36, 0.40),
-                "window_color": (0.50, 0.66, 0.78), "seed": 13}},
-    {"x": 6.0, "z": 15.0,
-     "params": {"width": 6.5, "depth": 5.0, "height": 3.2,
-                "wall_color": (0.82, 0.56, 0.46), "roof_color": (0.48, 0.16, 0.12),
-                "window_color": (0.60, 0.74, 0.84), "seed": 14}},
-    {"x": 14.0, "z": 9.0,
-     "params": {"width": 5.0, "depth": 5.5, "height": 2.7,
-                "wall_color": (0.60, 0.70, 0.56), "roof_color": (0.34, 0.30, 0.20),
-                "window_color": (0.54, 0.70, 0.80), "seed": 15}},
-    {"x": 20.0, "z": 15.0,
-     "params": {"width": 5.0, "depth": 4.0, "height": 3.4,
-                "wall_color": (0.88, 0.84, 0.62), "roof_color": (0.58, 0.24, 0.18),
-                "window_color": (0.56, 0.71, 0.83), "seed": 16}},
+# asercja v2 "domy parami rozne" (check_scene).
+_HOUSE_SPOTS = [
+    (0.52, 20.0), (0.52, 59.0), (0.52, 98.0),
+    (0.52, 137.0), (0.52, 176.0), (0.52, 215.0),
 ]
+_HOUSE_PARAMS = [
+    {"width": 5.0, "depth": 4.0, "height": 2.6,
+     "wall_color": (0.85, 0.80, 0.70), "roof_color": (0.55, 0.20, 0.15),
+     "window_color": (0.52, 0.68, 0.80), "seed": 11},
+    {"width": 6.0, "depth": 5.0, "height": 3.0,
+     "wall_color": (0.72, 0.62, 0.52), "roof_color": (0.40, 0.28, 0.22),
+     "window_color": (0.58, 0.72, 0.82), "seed": 12},
+    {"width": 5.5, "depth": 4.5, "height": 2.8,
+     "wall_color": (0.68, 0.74, 0.80), "roof_color": (0.30, 0.36, 0.40),
+     "window_color": (0.50, 0.66, 0.78), "seed": 13},
+    {"width": 6.5, "depth": 5.0, "height": 3.2,
+     "wall_color": (0.82, 0.56, 0.46), "roof_color": (0.48, 0.16, 0.12),
+     "window_color": (0.60, 0.74, 0.84), "seed": 14},
+    {"width": 5.0, "depth": 5.5, "height": 2.7,
+     "wall_color": (0.60, 0.70, 0.56), "roof_color": (0.34, 0.30, 0.20),
+     "window_color": (0.54, 0.70, 0.80), "seed": 15},
+    {"width": 5.0, "depth": 4.0, "height": 3.4,
+     "wall_color": (0.88, 0.84, 0.62), "roof_color": (0.58, 0.24, 0.18),
+     "window_color": (0.56, 0.71, 0.83), "seed": 16},
+]
+HOUSES = [{"x": _ell(r, phi)[0], "z": _ell(r, phi)[1], "params": p}
+          for (r, phi), p in zip(_HOUSE_SPOTS, _HOUSE_PARAMS)]
 
-# Lodki na tafli morza (czesc parts/boat.py). Pomost (os x=0) ma srodek w XZ
-# okolo (0, -19) po przesunieciu o z=-26. boat_1 cumuje tuz przy pomoscie
-# (< 6 m od jego srodka), boat_2 dryfuje na otwartej wodzie (> 10 m od pomostu).
-# Kazda instancja rozni sie wymiarami, kolorem i seedem (zakaz idealnych kopii).
+# Lodki na tafli morza (czesc parts/boat.py). Pomost zatoczki (os x=0) wychodzi
+# ku -Z poza obrys wyspy; jego srodek w XZ to okolo (0, -31). boat_1 cumuje tuz
+# przy pomoscie (< 6 m od jego srodka), boat_2 dryfuje na otwartej wodzie po
+# stronie -Z (> 10 m od pomostu). Kazda instancja rozni sie wymiarami, kolorem
+# i seedem (zakaz idealnych kopii).
 BOATS = [
-    {"x": 2.6, "z": -18.0,
+    {"x": 3.5, "z": -33.0,
      "params": {"length": 3.6, "beam": 1.35, "depth": 0.26, "gunwale_y": 0.42,
                 "hull_color": (0.60, 0.28, 0.18), "seat_color": (0.72, 0.60, 0.40),
                 "seats": 2, "seed": 21}},
-    {"x": -13.0, "z": -31.0,
+    {"x": 22.0, "z": -34.0,
      "params": {"length": 4.4, "beam": 1.7, "depth": 0.34, "gunwale_y": 0.50,
                 "hull_color": (0.30, 0.40, 0.52), "seat_color": (0.66, 0.56, 0.42),
                 "seats": 3, "seed": 22}},
 ]
 
-# Zagajnik sosen za miasteczkiem (czesc parts/tree.py). Domy stoja w rzedach
-# z=9 / z=15, wiec zagajnik sadzimy glebiej w ladzie (+Z, z=22..28) na trawie.
-# Kazda sosna ma inna wysokosc, promien korony i seed (zakaz idealnych kopii);
-# assembler sadzi ja na terenie (min-Y == wysokosc najblizszego wierzcholka
-# terenu), tak jak domy. Grupy tree_1..tree_N.
-TREES = [
-    {"x": -22.0, "z": 23.0,
-     "params": {"height": 6.4, "base_radius": 1.5, "layers": 3, "seed": 31}},
-    {"x": -14.0, "z": 26.0,
-     "params": {"height": 4.6, "base_radius": 1.1, "layers": 3, "seed": 32}},
-    {"x": -6.0, "z": 22.0,
-     "params": {"height": 7.2, "base_radius": 1.7, "layers": 4, "seed": 33}},
-    {"x": 3.0, "z": 27.0,
-     "params": {"height": 5.2, "base_radius": 1.2, "layers": 3, "seed": 34}},
-    {"x": 11.0, "z": 23.0,
-     "params": {"height": 6.0, "base_radius": 1.4, "layers": 3, "seed": 35}},
-    {"x": 19.0, "z": 26.0,
-     "params": {"height": 4.0, "base_radius": 1.0, "layers": 2, "seed": 36}},
-    {"x": 26.0, "z": 22.0,
-     "params": {"height": 5.8, "base_radius": 1.35, "layers": 3, "seed": 37}},
+# Zagajnik sosen na tarasie dolnym wyspy (czesc parts/tree.py). Domy stoja na
+# tarasie srodkowym (r=0.52), wiec sosny sadzimy nieco nizej (r=0.65 -> teren
+# y=2.5) na luku od strony lądu, z dala od zatoczki. Kazda sosna ma inna
+# wysokosc, promien korony i seed (zakaz idealnych kopii); assembler sadzi ja
+# na terenie (min-Y == wysokosc najblizszego wierzcholka terenu). Grupy tree_i.
+_TREE_SPOTS = [
+    (0.65, 30.0), (0.65, 55.0), (0.65, 80.0), (0.65, 105.0),
+    (0.65, 130.0), (0.65, 155.0), (0.65, 200.0),
 ]
+_TREE_PARAMS = [
+    {"height": 6.4, "base_radius": 1.5, "layers": 3, "seed": 31},
+    {"height": 4.6, "base_radius": 1.1, "layers": 3, "seed": 32},
+    {"height": 7.2, "base_radius": 1.7, "layers": 4, "seed": 33},
+    {"height": 5.2, "base_radius": 1.2, "layers": 3, "seed": 34},
+    {"height": 6.0, "base_radius": 1.4, "layers": 3, "seed": 35},
+    {"height": 4.0, "base_radius": 1.0, "layers": 2, "seed": 36},
+    {"height": 5.8, "base_radius": 1.35, "layers": 3, "seed": 37},
+]
+TREES = [{"x": _ell(r, phi)[0], "z": _ell(r, phi)[1], "params": p}
+         for (r, phi), p in zip(_TREE_SPOTS, _TREE_PARAMS)]
 
 
-# Glazy nadmorskie (czesc parts/rocks.py). Linia brzegowa terenu (terrain v2)
-# biegnie lukiem z = -16 + 5*cos(pi*x/40); wieksza czesc glazow lezy wzdluz niej
-# tuz przy wodzie (waterline), a kilka wieksze siedzi na klifie pod latarnia
-# (okolice osi 0,0, na zboczu obok cokolu). Kazdy glaz rozni sie promieniem,
-# splaszczeniem, kolorem i seedem (zakaz idealnych kopii); assembler sadzi go na
-# terenie (min-Y == wysokosc najblizszego wierzcholka terenu) jak drzewa/domy.
-# Grupy rock_1..rock_N.
-ROCKS = [
-    {"x": -34.0, "z": -21.6,
-     "params": {"radius": 1.1, "scale_y": 0.65, "color": (0.52, 0.50, 0.47), "seed": 41}},
-    {"x": -26.0, "z": -19.5,
-     "params": {"radius": 0.8, "scale_y": 0.7, "color": (0.46, 0.45, 0.43), "seed": 42}},
-    {"x": -18.0, "z": -16.4,
-     "params": {"radius": 1.4, "scale_y": 0.6, "color": (0.55, 0.52, 0.48), "seed": 43}},
-    {"x": -10.0, "z": -13.7,
-     "params": {"radius": 0.9, "scale_y": 0.72, "color": (0.48, 0.47, 0.45), "seed": 44}},
-    {"x": -3.0, "z": -12.4,
-     "params": {"radius": 1.2, "scale_y": 0.64, "color": (0.50, 0.48, 0.44), "seed": 45}},
-    {"x": 5.0, "z": -12.6,
-     "params": {"radius": 0.7, "scale_y": 0.75, "color": (0.44, 0.43, 0.42), "seed": 46}},
-    {"x": 12.0, "z": -13.9,
-     "params": {"radius": 1.3, "scale_y": 0.6, "color": (0.53, 0.51, 0.47), "seed": 47}},
-    {"x": 20.0, "z": -16.6,
-     "params": {"radius": 0.95, "scale_y": 0.68, "color": (0.47, 0.46, 0.44), "seed": 48}},
-    {"x": 28.0, "z": -19.4,
-     "params": {"radius": 1.15, "scale_y": 0.66, "color": (0.51, 0.49, 0.46), "seed": 49}},
-    # --- glazy na klifie pod latarnia (na zboczu, obok cokolu) ---
-    {"x": -7.5, "z": -5.5,
-     "params": {"radius": 1.6, "scale_y": 0.7, "color": (0.49, 0.47, 0.44), "seed": 50}},
-    {"x": 7.5, "z": -5.0,
-     "params": {"radius": 1.5, "scale_y": 0.72, "color": (0.54, 0.51, 0.47), "seed": 51}},
-    {"x": 0.0, "z": 6.5,
-     "params": {"radius": 1.35, "scale_y": 0.68, "color": (0.46, 0.45, 0.43), "seed": 52}},
+# Glazy wokol wyspy (czesc parts/rocks.py). Otaczaja wyspe pierscieniem tuz przy
+# linii brzegowej (r=0.98 -> plycizna y=-0.8), wystajac ponad tafle. Kazdy glaz
+# rozni sie promieniem, splaszczeniem, kolorem i seedem (zakaz idealnych kopii);
+# assembler sadzi go na terenie (min-Y == wysokosc najblizszego wierzcholka
+# terenu) jak drzewa/domy. Grupy rock_1..rock_N.
+_ROCK_PARAMS = [
+    {"radius": 1.1, "scale_y": 0.65, "color": (0.52, 0.50, 0.47), "seed": 41},
+    {"radius": 0.8, "scale_y": 0.7, "color": (0.46, 0.45, 0.43), "seed": 42},
+    {"radius": 1.4, "scale_y": 0.6, "color": (0.55, 0.52, 0.48), "seed": 43},
+    {"radius": 0.9, "scale_y": 0.72, "color": (0.48, 0.47, 0.45), "seed": 44},
+    {"radius": 1.2, "scale_y": 0.64, "color": (0.50, 0.48, 0.44), "seed": 45},
+    {"radius": 0.7, "scale_y": 0.75, "color": (0.44, 0.43, 0.42), "seed": 46},
+    {"radius": 1.3, "scale_y": 0.6, "color": (0.53, 0.51, 0.47), "seed": 47},
+    {"radius": 0.95, "scale_y": 0.68, "color": (0.47, 0.46, 0.44), "seed": 48},
+    {"radius": 1.15, "scale_y": 0.66, "color": (0.51, 0.49, 0.46), "seed": 49},
+    {"radius": 1.6, "scale_y": 0.7, "color": (0.49, 0.47, 0.44), "seed": 50},
+    {"radius": 1.5, "scale_y": 0.72, "color": (0.54, 0.51, 0.47), "seed": 51},
+    {"radius": 1.35, "scale_y": 0.68, "color": (0.46, 0.45, 0.43), "seed": 52},
 ]
+ROCKS = [{"x": _ell(0.98, 30.0 * k)[0], "z": _ell(0.98, 30.0 * k)[1], "params": p}
+         for k, p in enumerate(_ROCK_PARAMS)]
 
 
 # Sciezka piesza (czesc parts/path.py). Trasa (wezly XZ) wiedzie od ladowego
-# konca pomostu (os x=0, z~-12) przez rejon miasteczka (domy w rzedach z=9/z=15)
-# z powrotem do rejonu latarni na klifie (os 0, 0). Assembler dopasowuje
-# wysokosc kazdego wierzcholka wstegi do terenu (min odleglosc od najblizszego
-# wierzcholka terenu), wiec sciezka przylega do zbocza klifu i plazy. Grupa path.
+# konca pomostu na plazy zatoczki (os x=0, z~-24) tarasami w gore do rejonu
+# latarni na plateau (os 0, 0). Assembler dopasowuje wysokosc kazdego
+# wierzcholka wstegi do terenu (min odleglosc od najblizszego wierzcholka
+# terenu), wiec sciezka pokonuje tarasy przylegajac do zbocza. Grupa path.
 PATH_ROUTE = [
-    (0.0, -11.0),    # rejon pomostu (ladowy koniec, z~-12)
-    (-2.0, -4.0),
-    (-8.0, 4.0),     # wejscie w miasteczko od lewej
-    (-6.0, 11.0),    # pomiedzy rzedami domow
-    (2.0, 13.0),     # przejscie przez miasteczko
-    (5.0, 6.0),
-    (2.0, 1.0),      # rejon latarni (os 0, 0)
+    (0.0, -22.0),    # rejon pomostu (ladowy koniec na plazy, z~-24)
+    (1.0, -15.0),    # wyjscie z zatoczki na taras dolny
+    (1.5, -8.0),     # taras srodkowy
+    (0.5, -2.0),
+    (0.0, 0.0),      # rejon latarni (plateau, os 0, 0)
 ]
 
 
@@ -206,7 +205,7 @@ def assemble():
     """Buduje liste grup sceny (z prefiksami i materialami namespaced)."""
     scene = []
 
-    # --- teren: pas wybrzeza, baza do posadowienia reszty ---
+    # --- teren: wyspa (terrain v3), baza do posadowienia reszty ---
     terrain = _load_part("terrain").build()
     _namespace_materials(terrain, "terrain")
     terrain[0]["name"] = "terrain"
@@ -214,7 +213,7 @@ def assemble():
     scene.extend(terrain)
 
     # --- woda: tafla na y=0, rozciagnieta poza krawedz ladu (otacza wyspe) ---
-    water = _load_part("water").build(size=80.0, cells=16)
+    water = _load_part("water").build(size=100.0, cells=20)
     _namespace_materials(water, "water")
     water[0]["name"] = "water"
     scene.extend(water)
@@ -241,15 +240,16 @@ def assemble():
         _translate([house], 0.0, ty, 0.0)
         scene.append(house)
 
-    # --- pomost: od linii brzegowej (-Z) w glab morza ---
-    # Teren (terrain v2) to pas wybrzeza: lad po stronie +Z, woda po -Z, a
-    # lukowa linia brzegowa w osi x=0 zaczyna lad przy z=-12. Pomost (lokalne
-    # z=0..length=14, os x=0) przesuwamy o -26, by jego ladowy koniec (z=14 ->
-    # scena z=-12) stykal sie z plaza, a poklad wchodzil nad otwarta wode
-    # (morski koniec z=0 -> scena z=-26, ~14 m od brzegu).
+    # --- pomost: z plazy zatoczki (-Z) POZA obrys wyspy w otwarte morze ---
+    # Teren (terrain v3) to wyspa; zatoczka z plaza otwiera sie ku -Z, a plaza
+    # przy osi x=0 siega do z~-28 (r=0.95). Pomost (lokalne z=0..length=14, os
+    # x=0) przesuwamy o -38, by jego ladowy koniec (z=14 -> scena z=-24) lezal
+    # na plazy (<= 2 m od lądu), a morski koniec (z=0 -> scena z=-38) siegal
+    # otwartej wody poza obrysem wyspy (>= 8 m od najblizszego wierzcholka
+    # terenu o y > 0.05). Asercje check_scene v2: styk z plaza ORAZ zasieg w morze.
     pier = _load_part("pier").build()
     _namespace_materials(pier, "pier")
-    _translate(pier, 0.0, 0.0, -26.0)
+    _translate(pier, 0.0, 0.0, -38.0)
     for g in pier:
         g["name"] = "pier_" + g["name"]
     scene.extend(pier)
