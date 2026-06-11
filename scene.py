@@ -177,6 +177,22 @@ STAIRS = [
                               "step_width": 1.8, "seed": 73}},
 ]
 
+# Kapliczka i mostek (czesci parts/chapel.py, parts/bridge.py). Kapliczka stoi
+# na turni — wyniesionym plateau przy osi (8, 0), gdzie teren ma y=9 m (>= 3 m
+# pod kapliczka) i jest >= 6 m od najblizszego domu z pierscienia. Mostek linowy
+# biegnie wzdluz +X (srodek w x=13): jego turniowy koniec (x~10) jest <= 5 m od
+# kapliczki, a wioskowy koniec (x~16) <= 6 m od domu przy phi=0 (x~18). Mostek
+# unosimy o lift ponad teren, by zwisajace liny nie zapadaly sie w grunt.
+CHAPEL = {
+    "x": 8.0, "z": 0.0,
+    "params": {"seed": 81, "wall_color": (0.88, 0.85, 0.78),
+               "roof_color": (0.42, 0.20, 0.15), "cross_color": (0.28, 0.24, 0.20)},
+}
+BRIDGE = {
+    "x": 13.0, "z": 0.0, "rot": 0.0, "lift": 0.7,
+    "params": {"span": 6.0, "half_spread": 0.6, "sag": 0.6, "seed": 91},
+}
+
 
 def _load_part(stem):
     path = PARTS / (stem + ".py")
@@ -372,6 +388,30 @@ def assemble():
         cx, cz = _centroid_xz(seg)
         _translate([seg], 0.0, _nearest_terrain_y(tverts, cx, cz), 0.0)
         scene.append(seg)
+
+    # --- kapliczka: na turni (wyniesione plateau) z dala od zabudowy,
+    # posadowiona na terenie (podstawa y=0 == wysokosc najblizszego wierzcholka
+    # terenu). Grupa chapel_1. ---
+    chapel_mod = _load_part("chapel")
+    groups = chapel_mod.build(**CHAPEL["params"])
+    _namespace_materials(groups, "chapel_1")
+    chapel = _merge(groups, "chapel_1")
+    _translate([chapel], CHAPEL["x"], 0.0, CHAPEL["z"])
+    cx, cz = _centroid_xz(chapel)
+    _translate([chapel], 0.0, _nearest_terrain_y(tverts, cx, cz), 0.0)
+    scene.append(chapel)
+
+    # --- mostek linowy: od turni kapliczki ku zabudowie wioski, uniesiony nad
+    # teren o lift, by liny ze zwisem nie zapadaly sie w grunt. Grupa bridge_1. ---
+    bridge_mod = _load_part("bridge")
+    groups = bridge_mod.build(**BRIDGE["params"])
+    _namespace_materials(groups, "bridge_1")
+    bridge = _merge(groups, "bridge_1")
+    _rotate_y([bridge], BRIDGE["rot"])
+    _translate([bridge], BRIDGE["x"], 0.0, BRIDGE["z"])
+    cx, cz = _centroid_xz(bridge)
+    _translate([bridge], 0.0, _nearest_terrain_y(tverts, cx, cz) + BRIDGE["lift"], 0.0)
+    scene.append(bridge)
 
     return scene
 
