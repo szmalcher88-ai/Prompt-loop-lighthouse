@@ -1,0 +1,21 @@
+{
+  "_comment": "Podloga wersji kontraktu (LESSON-003). Podnosi ja WYLACZNIE konfigurator przy bramie. Checkery egzekwuja: wersja_w_module >= podloga.",
+  "parts": {
+    "terrain": 2,
+    "water": 1,
+    "lighthouse": 1,
+    "house": 2,
+    "pier": 2,
+    "boat": 2,
+    "tree": 2,
+    "rocks": 2,
+    "path": 2,
+    "wall": 3,
+    "chapel": 3,
+    "bridge": 3,
+    "prop_barrel": 3,
+    "prop_crate": 3,
+    "bush": 3
+  },
+  "scene": 2
+}

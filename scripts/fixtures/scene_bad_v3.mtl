@@ -1,0 +1,635 @@
+newmtl terrain_rock_face
+Kd 0.480 0.450 0.400
+
+newmtl terrain_grass
+Kd 0.350 0.500 0.280
+
+newmtl terrain_sand
+Kd 0.800 0.720 0.500
+
+newmtl terrain_seabed
+Kd 0.220 0.300 0.360
+
+newmtl water_sea
+Kd 0.160 0.280 0.480
+
+newmtl lighthouse_tower_lh_white
+Kd 0.920 0.920 0.900
+
+newmtl lighthouse_tower_lh_red
+Kd 0.750 0.200 0.180
+
+newmtl house_1_timber_foundation
+Kd 0.450 0.450 0.450
+
+newmtl house_1_timber_wall_0
+Kd 0.850 0.780 0.620
+
+newmtl house_1_timber_wall_1
+Kd 0.820 0.750 0.590
+
+newmtl house_1_timber_stone_0
+Kd 0.550 0.520 0.480
+
+newmtl house_1_timber_stone_1
+Kd 0.520 0.490 0.450
+
+newmtl house_1_timber_beam
+Kd 0.300 0.200 0.120
+
+newmtl house_1_timber_roof_0
+Kd 0.450 0.300 0.300
+
+newmtl house_1_timber_roof_1
+Kd 0.420 0.280 0.280
+
+newmtl house_1_timber_door
+Kd 0.350 0.220 0.120
+
+newmtl house_1_timber_frame
+Kd 0.950 0.950 0.900
+
+newmtl house_1_timber_glass
+Kd 0.550 0.700 0.850
+
+newmtl house_1_timber_chimney
+Kd 0.500 0.300 0.250
+
+newmtl house_2_stone_foundation
+Kd 0.450 0.450 0.450
+
+newmtl house_2_stone_wall_0
+Kd 0.850 0.780 0.620
+
+newmtl house_2_stone_wall_1
+Kd 0.820 0.750 0.590
+
+newmtl house_2_stone_stone_0
+Kd 0.550 0.520 0.480
+
+newmtl house_2_stone_stone_1
+Kd 0.520 0.490 0.450
+
+newmtl house_2_stone_beam
+Kd 0.300 0.200 0.120
+
+newmtl house_2_stone_roof_0
+Kd 0.450 0.300 0.300
+
+newmtl house_2_stone_roof_1
+Kd 0.420 0.280 0.280
+
+newmtl house_2_stone_door
+Kd 0.350 0.220 0.120
+
+newmtl house_2_stone_frame
+Kd 0.950 0.950 0.900
+
+newmtl house_2_stone_glass
+Kd 0.550 0.700 0.850
+
+newmtl house_2_stone_chimney
+Kd 0.500 0.300 0.250
+
+newmtl house_3_two_story_foundation
+Kd 0.450 0.450 0.450
+
+newmtl house_3_two_story_wall_0
+Kd 0.850 0.780 0.620
+
+newmtl house_3_two_story_wall_1
+Kd 0.820 0.750 0.590
+
+newmtl house_3_two_story_stone_0
+Kd 0.550 0.520 0.480
+
+newmtl house_3_two_story_stone_1
+Kd 0.520 0.490 0.450
+
+newmtl house_3_two_story_beam
+Kd 0.300 0.200 0.120
+
+newmtl house_3_two_story_roof_0
+Kd 0.450 0.300 0.300
+
+newmtl house_3_two_story_roof_1
+Kd 0.420 0.280 0.280
+
+newmtl house_3_two_story_door
+Kd 0.350 0.220 0.120
+
+newmtl house_3_two_story_frame
+Kd 0.950 0.950 0.900
+
+newmtl house_3_two_story_glass
+Kd 0.550 0.700 0.850
+
+newmtl house_3_two_story_chimney
+Kd 0.500 0.300 0.250
+
+newmtl house_4_timber_foundation
+Kd 0.450 0.450 0.450
+
+newmtl house_4_timber_wall_0
+Kd 0.850 0.780 0.620
+
+newmtl house_4_timber_wall_1
+Kd 0.820 0.750 0.590
+
+newmtl house_4_timber_stone_0
+Kd 0.550 0.520 0.480
+
+newmtl house_4_timber_stone_1
+Kd 0.520 0.490 0.450
+
+newmtl house_4_timber_beam
+Kd 0.300 0.200 0.120
+
+newmtl house_4_timber_roof_0
+Kd 0.450 0.300 0.300
+
+newmtl house_4_timber_roof_1
+Kd 0.420 0.280 0.280
+
+newmtl house_4_timber_door
+Kd 0.350 0.220 0.120
+
+newmtl house_4_timber_frame
+Kd 0.950 0.950 0.900
+
+newmtl house_4_timber_glass
+Kd 0.550 0.700 0.850
+
+newmtl house_4_timber_chimney
+Kd 0.500 0.300 0.250
+
+newmtl house_5_stone_foundation
+Kd 0.450 0.450 0.450
+
+newmtl house_5_stone_wall_0
+Kd 0.850 0.780 0.620
+
+newmtl house_5_stone_wall_1
+Kd 0.820 0.750 0.590
+
+newmtl house_5_stone_stone_0
+Kd 0.550 0.520 0.480
+
+newmtl house_5_stone_stone_1
+Kd 0.520 0.490 0.450
+
+newmtl house_5_stone_beam
+Kd 0.300 0.200 0.120
+
+newmtl house_5_stone_roof_0
+Kd 0.450 0.300 0.300
+
+newmtl house_5_stone_roof_1
+Kd 0.420 0.280 0.280
+
+newmtl house_5_stone_door
+Kd 0.350 0.220 0.120
+
+newmtl house_5_stone_frame
+Kd 0.950 0.950 0.900
+
+newmtl house_5_stone_glass
+Kd 0.550 0.700 0.850
+
+newmtl house_5_stone_chimney
+Kd 0.500 0.300 0.250
+
+newmtl house_6_two_story_foundation
+Kd 0.450 0.450 0.450
+
+newmtl house_6_two_story_wall_0
+Kd 0.850 0.780 0.620
+
+newmtl house_6_two_story_wall_1
+Kd 0.820 0.750 0.590
+
+newmtl house_6_two_story_stone_0
+Kd 0.550 0.520 0.480
+
+newmtl house_6_two_story_stone_1
+Kd 0.520 0.490 0.450
+
+newmtl house_6_two_story_beam
+Kd 0.300 0.200 0.120
+
+newmtl house_6_two_story_roof_0
+Kd 0.450 0.300 0.300
+
+newmtl house_6_two_story_roof_1
+Kd 0.420 0.280 0.280
+
+newmtl house_6_two_story_door
+Kd 0.350 0.220 0.120
+
+newmtl house_6_two_story_frame
+Kd 0.950 0.950 0.900
+
+newmtl house_6_two_story_glass
+Kd 0.550 0.700 0.850
+
+newmtl house_6_two_story_chimney
+Kd 0.500 0.300 0.250
+
+newmtl house_7_timber_foundation
+Kd 0.450 0.450 0.450
+
+newmtl house_7_timber_wall_0
+Kd 0.850 0.780 0.620
+
+newmtl house_7_timber_wall_1
+Kd 0.820 0.750 0.590
+
+newmtl house_7_timber_stone_0
+Kd 0.550 0.520 0.480
+
+newmtl house_7_timber_stone_1
+Kd 0.520 0.490 0.450
+
+newmtl house_7_timber_beam
+Kd 0.300 0.200 0.120
+
+newmtl house_7_timber_roof_0
+Kd 0.450 0.300 0.300
+
+newmtl house_7_timber_roof_1
+Kd 0.420 0.280 0.280
+
+newmtl house_7_timber_door
+Kd 0.350 0.220 0.120
+
+newmtl house_7_timber_frame
+Kd 0.950 0.950 0.900
+
+newmtl house_7_timber_glass
+Kd 0.550 0.700 0.850
+
+newmtl house_7_timber_chimney
+Kd 0.500 0.300 0.250
+
+newmtl house_8_stone_foundation
+Kd 0.450 0.450 0.450
+
+newmtl house_8_stone_wall_0
+Kd 0.850 0.780 0.620
+
+newmtl house_8_stone_wall_1
+Kd 0.820 0.750 0.590
+
+newmtl house_8_stone_stone_0
+Kd 0.550 0.520 0.480
+
+newmtl house_8_stone_stone_1
+Kd 0.520 0.490 0.450
+
+newmtl house_8_stone_beam
+Kd 0.300 0.200 0.120
+
+newmtl house_8_stone_roof_0
+Kd 0.450 0.300 0.300
+
+newmtl house_8_stone_roof_1
+Kd 0.420 0.280 0.280
+
+newmtl house_8_stone_door
+Kd 0.350 0.220 0.120
+
+newmtl house_8_stone_frame
+Kd 0.950 0.950 0.900
+
+newmtl house_8_stone_glass
+Kd 0.550 0.700 0.850
+
+newmtl house_8_stone_chimney
+Kd 0.500 0.300 0.250
+
+newmtl house_9_two_story_foundation
+Kd 0.450 0.450 0.450
+
+newmtl house_9_two_story_wall_0
+Kd 0.850 0.780 0.620
+
+newmtl house_9_two_story_wall_1
+Kd 0.820 0.750 0.590
+
+newmtl house_9_two_story_stone_0
+Kd 0.550 0.520 0.480
+
+newmtl house_9_two_story_stone_1
+Kd 0.520 0.490 0.450
+
+newmtl house_9_two_story_beam
+Kd 0.300 0.200 0.120
+
+newmtl house_9_two_story_roof_0
+Kd 0.450 0.300 0.300
+
+newmtl house_9_two_story_roof_1
+Kd 0.420 0.280 0.280
+
+newmtl house_9_two_story_door
+Kd 0.350 0.220 0.120
+
+newmtl house_9_two_story_frame
+Kd 0.950 0.950 0.900
+
+newmtl house_9_two_story_glass
+Kd 0.550 0.700 0.850
+
+newmtl house_9_two_story_chimney
+Kd 0.500 0.300 0.250
+
+newmtl wall_1_wall_stone_0
+Kd 0.500 0.470 0.430
+
+newmtl wall_1_wall_stone_1
+Kd 0.470 0.440 0.400
+
+newmtl wall_1_step
+Kd 0.580 0.550 0.500
+
+newmtl wall_2_wall_stone_0
+Kd 0.500 0.470 0.430
+
+newmtl wall_2_wall_stone_1
+Kd 0.470 0.440 0.400
+
+newmtl wall_2_step
+Kd 0.580 0.550 0.500
+
+newmtl stair_1_wall_stone_0
+Kd 0.500 0.470 0.430
+
+newmtl stair_1_wall_stone_1
+Kd 0.470 0.440 0.400
+
+newmtl stair_1_step
+Kd 0.580 0.550 0.500
+
+newmtl pier_1_plank_0
+Kd 0.550 0.400 0.250
+
+newmtl pier_1_plank_1
+Kd 0.500 0.360 0.220
+
+newmtl pier_1_pile
+Kd 0.350 0.250 0.150
+
+newmtl pier_1_rail_post
+Kd 0.450 0.320 0.200
+
+newmtl pier_1_rail_top
+Kd 0.400 0.280 0.180
+
+newmtl pier_1_bollard
+Kd 0.300 0.220 0.140
+
+newmtl pier_2_plank_0
+Kd 0.550 0.400 0.250
+
+newmtl pier_2_plank_1
+Kd 0.500 0.360 0.220
+
+newmtl pier_2_pile
+Kd 0.350 0.250 0.150
+
+newmtl pier_2_rail_post
+Kd 0.450 0.320 0.200
+
+newmtl pier_2_rail_top
+Kd 0.400 0.280 0.180
+
+newmtl pier_2_bollard
+Kd 0.300 0.220 0.140
+
+newmtl barrel_1_barrel_wood
+Kd 0.500 0.360 0.220
+
+newmtl barrel_1_hoop
+Kd 0.300 0.300 0.320
+
+newmtl barrel_2_barrel_wood
+Kd 0.500 0.360 0.220
+
+newmtl barrel_2_hoop
+Kd 0.300 0.300 0.320
+
+newmtl barrel_3_barrel_wood
+Kd 0.500 0.360 0.220
+
+newmtl barrel_3_hoop
+Kd 0.300 0.300 0.320
+
+newmtl barrel_4_barrel_wood
+Kd 0.500 0.360 0.220
+
+newmtl barrel_4_hoop
+Kd 0.300 0.300 0.320
+
+newmtl crate_1_crate_wood
+Kd 0.550 0.420 0.260
+
+newmtl crate_1_slat
+Kd 0.400 0.300 0.180
+
+newmtl crate_2_crate_wood
+Kd 0.550 0.420 0.260
+
+newmtl crate_2_slat
+Kd 0.400 0.300 0.180
+
+newmtl crate_3_crate_wood
+Kd 0.550 0.420 0.260
+
+newmtl crate_3_slat
+Kd 0.400 0.300 0.180
+
+newmtl bush_1_bush_0
+Kd 0.200 0.380 0.200
+
+newmtl bush_1_bush_1
+Kd 0.160 0.340 0.180
+
+newmtl bush_2_bush_0
+Kd 0.200 0.380 0.200
+
+newmtl bush_2_bush_1
+Kd 0.160 0.340 0.180
+
+newmtl bush_3_bush_0
+Kd 0.200 0.380 0.200
+
+newmtl bush_3_bush_1
+Kd 0.160 0.340 0.180
+
+newmtl bush_4_bush_0
+Kd 0.200 0.380 0.200
+
+newmtl bush_4_bush_1
+Kd 0.160 0.340 0.180
+
+newmtl bush_5_bush_0
+Kd 0.200 0.380 0.200
+
+newmtl bush_5_bush_1
+Kd 0.160 0.340 0.180
+
+newmtl bush_6_bush_0
+Kd 0.200 0.380 0.200
+
+newmtl bush_6_bush_1
+Kd 0.160 0.340 0.180
+
+newmtl bush_7_bush_0
+Kd 0.200 0.380 0.200
+
+newmtl bush_7_bush_1
+Kd 0.160 0.340 0.180
+
+newmtl bush_8_bush_0
+Kd 0.200 0.380 0.200
+
+newmtl bush_8_bush_1
+Kd 0.160 0.340 0.180
+
+newmtl boat_1_hull_0
+Kd 0.400 0.260 0.160
+
+newmtl boat_1_hull_1
+Kd 0.370 0.240 0.150
+
+newmtl boat_1_seat
+Kd 0.620 0.460 0.300
+
+newmtl boat_2_hull_0
+Kd 0.400 0.260 0.160
+
+newmtl boat_2_hull_1
+Kd 0.370 0.240 0.150
+
+newmtl boat_2_seat
+Kd 0.620 0.460 0.300
+
+newmtl tree_1_trunk
+Kd 0.400 0.280 0.160
+
+newmtl tree_1_leaves_0
+Kd 0.120 0.350 0.180
+
+newmtl tree_1_leaves_1
+Kd 0.100 0.320 0.160
+
+newmtl tree_2_trunk
+Kd 0.400 0.280 0.160
+
+newmtl tree_2_leaves_0
+Kd 0.120 0.350 0.180
+
+newmtl tree_2_leaves_1
+Kd 0.100 0.320 0.160
+
+newmtl tree_3_trunk
+Kd 0.400 0.280 0.160
+
+newmtl tree_3_leaves_0
+Kd 0.120 0.350 0.180
+
+newmtl tree_3_leaves_1
+Kd 0.100 0.320 0.160
+
+newmtl tree_4_trunk
+Kd 0.400 0.280 0.160
+
+newmtl tree_4_leaves_0
+Kd 0.120 0.350 0.180
+
+newmtl tree_4_leaves_1
+Kd 0.100 0.320 0.160
+
+newmtl tree_5_trunk
+Kd 0.400 0.280 0.160
+
+newmtl tree_5_leaves_0
+Kd 0.120 0.350 0.180
+
+newmtl tree_5_leaves_1
+Kd 0.100 0.320 0.160
+
+newmtl tree_6_trunk
+Kd 0.400 0.280 0.160
+
+newmtl tree_6_leaves_0
+Kd 0.120 0.350 0.180
+
+newmtl tree_6_leaves_1
+Kd 0.100 0.320 0.160
+
+newmtl rock_1_rock_0
+Kd 0.450 0.440 0.420
+
+newmtl rock_1_rock_1
+Kd 0.500 0.490 0.460
+
+newmtl rock_2_rock_0
+Kd 0.450 0.440 0.420
+
+newmtl rock_2_rock_1
+Kd 0.500 0.490 0.460
+
+newmtl rock_3_rock_0
+Kd 0.450 0.440 0.420
+
+newmtl rock_3_rock_1
+Kd 0.500 0.490 0.460
+
+newmtl rock_4_rock_0
+Kd 0.450 0.440 0.420
+
+newmtl rock_4_rock_1
+Kd 0.500 0.490 0.460
+
+newmtl rock_5_rock_0
+Kd 0.450 0.440 0.420
+
+newmtl rock_5_rock_1
+Kd 0.500 0.490 0.460
+
+newmtl rock_6_rock_0
+Kd 0.450 0.440 0.420
+
+newmtl rock_6_rock_1
+Kd 0.500 0.490 0.460
+
+newmtl rock_7_rock_0
+Kd 0.450 0.440 0.420
+
+newmtl rock_7_rock_1
+Kd 0.500 0.490 0.460
+
+newmtl rock_8_rock_0
+Kd 0.450 0.440 0.420
+
+newmtl rock_8_rock_1
+Kd 0.500 0.490 0.460
+
+newmtl rock_9_rock_0
+Kd 0.450 0.440 0.420
+
+newmtl rock_9_rock_1
+Kd 0.500 0.490 0.460
+
+newmtl rock_10_rock_0
+Kd 0.450 0.440 0.420
+
+newmtl rock_10_rock_1
+Kd 0.500 0.490 0.460
+
+newmtl path_1_path_0
+Kd 0.620 0.580 0.500
+
+newmtl path_1_path_1
+Kd 0.580 0.540 0.470

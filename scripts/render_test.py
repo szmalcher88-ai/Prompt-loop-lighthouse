@@ -35,9 +35,9 @@ ROOT = Path(__file__).resolve().parent.parent
 SCENE = ROOT / "scene.py"
 
 CAMERAS = [
-    ("panorama", 16, -90),  # od strony morza
-    ("iso", 30, 45),        # izometryczny
-    ("profile", 0, 0),      # profil sylwetki
+    ("panorama", 25, -40),  # ujęcie główne: 3/4 z góry, jak referencja (ART_DIRECTION.md)
+    ("profile", 2, 0),      # profil sylwetki
+    ("bay", 12, -90),       # widok zatoczki (plaża od -Z)
 ]
 FIGSIZE, DPI = (8, 6), 100
 BACKGROUND = (1.0, 1.0, 1.0)
@@ -48,6 +48,7 @@ def parse(obj_path):
     verts, tris, cols = [], [], []
     colors = {}
     current_rgb = (0.6, 0.6, 0.6)
+    current_water = False
     mtl_colors = {}
     for raw in obj_path.read_text(encoding="utf-8").splitlines():
         p = raw.split()
@@ -69,15 +70,32 @@ def parse(obj_path):
             verts.append(tuple(float(c) for c in p[1:4]))
         elif p[0] == "usemtl":
             current_rgb = mtl_colors.get(p[1], current_rgb)
+            current_water = any(k in p[1] for k in ("sea", "water"))
         elif p[0] == "f":
             idxs = []
             for tok in p[1:]:
                 i = int(tok.split("/")[0])
                 idxs.append(i - 1 if i > 0 else len(verts) + i)
             for a, b in zip(idxs[1:], idxs[2:]):  # fan
-                tris.append((verts[idxs[0]], verts[a], verts[b]))
-                cols.append(current_rgb)
+                tri = (verts[idxs[0]], verts[a], verts[b])
+                # naprawa artefaktu sortowania głębi: wielkie tafle wody tną się
+                # na drobne trójkąty, by painter's algorithm sortował je lokalnie
+                for t in (_subdivide(tri, 6.0) if current_water else [tri]):
+                    tris.append(t)
+                    cols.append(current_rgb)
     return tris, cols
+
+
+def _subdivide(tri, max_edge, depth=0):
+    a, b, c = (np.array(p) for p in tri)
+    edges = (np.linalg.norm(b - a), np.linalg.norm(c - b), np.linalg.norm(a - c))
+    if depth >= 6 or max(edges) <= max_edge:
+        return [tri]
+    ab, bc, ca = (a + b) / 2, (b + c) / 2, (c + a) / 2
+    out = []
+    for child in ((a, ab, ca), (ab, b, bc), (ca, bc, c), (ab, bc, ca)):
+        out.extend(_subdivide(tuple(map(tuple, child)), max_edge, depth + 1))
+    return out
 
 
 def render_bytes(tris, cols, elev, azim):
@@ -131,9 +149,11 @@ def pixel_checks(name, png_bytes, errors, version=1):
     if uniq < min_colors:
         errors.append("%s: za mało kolorów (%d < %d) — materiały/jitter nie weszły?"
                       % (name, uniq, min_colors))
-    if version >= 2 and name == "panorama" and not (0.25 <= non_bg <= 0.65):
-        errors.append("panorama: wypełnienie kadru %.1f%% poza pasmem 25-65%% "
-                      "(scena ma wypełniać kadr)" % (non_bg * 100))
+    if version >= 2 and name == "panorama":
+        lo, hi = (0.30, 0.70) if version >= 3 else (0.25, 0.65)
+        if not (lo <= non_bg <= hi):
+            errors.append("panorama: wypełnienie kadru %.1f%% poza pasmem %d-%d%% "
+                          "(scena ma wypełniać kadr)" % (non_bg * 100, lo * 100, hi * 100))
 
 
 def main():

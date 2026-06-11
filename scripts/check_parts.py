@@ -342,6 +342,239 @@ def check_path(name, groups):
         err(name, "ścieżka skacze w pionie (> 4 m różnicy wysokości)")
 
 
+# ---------------------------------------------------------------------------
+# Sekcje v3 (aktywne od CONTRACT_VERSION >= 3) — milestone 2 "Forma":
+# wyspa wg referencji (ART_DIRECTION.md). terrain v3 ZASTĘPUJE v2 (wyspa
+# unieważnia pas wybrzeża — decyzja architekta); house v3 DODAJE archetypy
+# ponad v2; nowe typy: wall/chapel/bridge/prop_barrel/prop_crate/bush.
+# ---------------------------------------------------------------------------
+
+def _xz_buckets(verts, cell):
+    buckets = {}
+    for v in verts:
+        buckets.setdefault((int(v[0] // cell), int(v[2] // cell)), []).append(v)
+    return buckets
+
+
+def check_terrain_v3(name, groups):
+    verts = all_vertices(groups)
+    if extent(verts, 0) < 80 or extent(verts, 2) < 60:
+        err(name, "v3: wyspa za mała (wymagane >= 80 m w X i >= 60 m w Z)")
+    ys = [v[1] for v in verts]
+    if min(ys) < -3 or max(ys) > 20:
+        err(name, "v3: wysokości poza zakresem [-3, 20] (jest %.2f..%.2f)" % (min(ys), max(ys)))
+    # wyspa: cały obrys siatki pod wodą
+    x0 = min(v[0] for v in verts); x1 = max(v[0] for v in verts)
+    z0 = min(v[2] for v in verts); z1 = max(v[2] for v in verts)
+    border = [v for v in verts if v[0] - x0 < 1.0 or x1 - v[0] < 1.0
+              or v[2] - z0 < 1.0 or z1 - v[2] < 1.0]
+    wet = [v for v in border if v[1] < 0]
+    if len(wet) < len(border):
+        err(name, "v3: to nie wyspa — %d wierzchołków obrysu siatki nad wodą"
+            % (len(border) - len(wet)))
+    land = [v for v in verts if v[1] > 0.05]
+    if not (0.20 * len(verts) <= len(land) <= 0.75 * len(verts)):
+        err(name, "v3: udział lądu %.0f%% poza zakresem 20-75%% (wyspa w wodzie)"
+            % (100 * len(land) / max(len(verts), 1)))
+    # >= 3 poziomy tarasowe: pasma wysokości skupiające >= 5% lądu, rozdzielone >= 1 m
+    hist = {}
+    for v in land:
+        hist[round(v[1] * 2) / 2] = hist.get(round(v[1] * 2) / 2, 0) + 1
+    bands = sorted(h for h, c in hist.items() if c >= 0.05 * len(land))
+    plateaus = []
+    for h in bands:
+        if not plateaus or h - plateaus[-1] >= 1.0:
+            plateaus.append(h)
+    if len(plateaus) < 3:
+        err(name, "v3: za mało poziomów tarasowych (%d < 3; pasma: %s)"
+            % (len(plateaus), plateaus))
+    # klify: >= 8 miejsc z uskokiem >= 2.5 m na dystansie <= 3 m
+    cliff_sites = set()
+    for key, vs in _xz_buckets(verts, 3.0).items():
+        lo = min(v[1] for v in vs)
+        hi = max(v[1] for v in vs)
+        if hi - lo >= 2.5:
+            cliff_sites.add(key)
+    if len(cliff_sites) < 8:
+        err(name, "v3: za mało klifów (%d miejsc z uskokiem >= 2.5 m < 8)" % len(cliff_sites))
+    # zatoczka z plażą: piasek wcięty w głąb obrysu lądu
+    sand = [v for f in mat_faces(groups, "sand", "beach") for v in f]
+    if len(mat_faces(groups, "sand", "beach")) < 10:
+        err(name, "v3: brak plaży w zatoczce (>= 10 ścianek 'sand*'/'beach*')")
+    elif land:
+        cx = sum(v[0] for v in land) / len(land)
+        cz = sum(v[2] for v in land) / len(land)
+        shore = [v for v in verts if 0.0 <= v[1] <= 0.2]
+        if shore:
+            import statistics
+            r_shore = statistics.mean(math.hypot(v[0] - cx, v[2] - cz) for v in shore)
+            r_sand = statistics.mean(math.hypot(v[0] - cx, v[2] - cz) for v in sand)
+            if r_sand > r_shore - 2.0:
+                err(name, "v3: plaża nie tworzy zatoczki (wcięcie %.1f m < 2 m w głąb obrysu)"
+                    % (r_shore - r_sand))
+        if not all(-0.1 <= v[1] <= 1.2 for v in sand):
+            err(name, "v3: plaża poza zakresem wysokości [-0.1, 1.2]")
+
+
+HOUSE_ARCHETYPES = ("timber", "stone", "two_story")
+
+
+def _glass_levels(groups):
+    """Pasma wysokości okien: grupy wierzchołków szyb rozdzielone > 1.2 m."""
+    ys = sorted({round(v[1], 1) for f in mat_faces(groups, "glass", "window") for v in f})
+    bands = 0
+    prev = None
+    for y in ys:
+        if prev is None or y - prev > 1.2:
+            bands += 1
+        prev = y
+    return list(range(bands))
+
+
+def check_house_v3(name, mod):
+    builds = {}
+    for a in HOUSE_ARCHETYPES:
+        try:
+            builds[a] = mod.build(archetype=a)
+        except TypeError as e:
+            err(name, "v3: build(archetype=%r) nieobsługiwane: %r" % (a, e))
+            return
+        except Exception as e:
+            err(name, "v3: build(archetype=%r) rzucił wyjątek: %r" % (a, e))
+            return
+    for a, groups in builds.items():
+        sub = "%s[%s]" % (name, a)
+        check_house(sub, groups)       # asercje v1 obowiązują każdy archetyp
+        check_house_v2(sub, groups)    # i v2 (okna/komin/fundament/framuga)
+    g = builds["timber"]
+    if len(mat_faces(g, "beam", "timber")) < 6:
+        err(name, "v3[timber]: mur pruski wymaga >= 6 ścianek belek 'beam*'/'timber*' na elewacji")
+    g = builds["stone"]
+    verts = all_vertices(g)
+    if extent(verts, 1) > 4.5:
+        err(name, "v3[stone]: chata kamienna za wysoka (%.1f > 4.5 m — 1 kondygnacja)" % extent(verts, 1))
+    if len(mat_faces(g, "stone")) < 6:
+        err(name, "v3[stone]: chata kamienna wymaga >= 6 ścianek 'stone*' (pełny cokół/mur)")
+    if len(_glass_levels(g)) > 1:
+        err(name, "v3[stone]: chata kamienna ma mieć 1 poziom okien")
+    g = builds["two_story"]
+    verts = all_vertices(g)
+    if extent(verts, 1) < 5.0:
+        err(name, "v3[two_story]: dom dwukondygnacyjny za niski (%.1f < 5 m)" % extent(verts, 1))
+    if len(_glass_levels(g)) < 2:
+        err(name, "v3[two_story]: wymagane >= 2 poziomy okien (są: %s)" % _glass_levels(g))
+    sigs = {a: (len(all_vertices(g)), tuple(round(extent(all_vertices(g), ax), 1) for ax in (0, 1, 2)))
+            for a, g in builds.items()}
+    for i, a in enumerate(HOUSE_ARCHETYPES):
+        for b in HOUSE_ARCHETYPES[i + 1:]:
+            if sigs[a] == sigs[b]:
+                err(name, "v3: archetypy %s i %s geometrycznie nieodróżnialne" % (a, b))
+
+
+def check_wall(name, groups):
+    wall_f = mat_faces(groups, "wall", "stone")
+    if len(wall_f) < 8:
+        err(name, "mur oporowy: za mało ścianek 'wall*'/'stone*' (%d < 8)" % len(wall_f))
+    elif max(v[1] for f in wall_f for v in f) - min(v[1] for f in wall_f for v in f) < 0.5:
+        err(name, "mur oporowy za niski (< 0.5 m)")
+    steps = mat_faces(groups, "stair", "step")
+    levels = sorted({round(sum(v[1] for v in f) / len(f), 1) for f in steps})
+    if len(levels) < 6:
+        err(name, "schody: za mało stopni (%d poziomów < 6)" % len(levels))
+    elif levels[-1] - levels[0] < 1.0:
+        err(name, "schody nie pokonują różnicy poziomów (>= 1 m)")
+
+
+def check_chapel(name, groups):
+    verts = all_vertices(groups)
+    roof = mat_faces(groups, "roof", "dach")
+    if not roof:
+        err(name, "kapliczka bez dachu (materiał 'roof*')")
+    cross = mat_faces(groups, "cross", "spire", "sygnaturka")
+    if not cross:
+        err(name, "kapliczka bez sygnaturki/krzyża (materiał 'cross*'/'spire*')")
+    else:
+        top = max(v[1] for f in cross for v in f)
+        if max(v[1] for v in verts) - top > 1e-6:
+            err(name, "sygnaturka/krzyż nie jest najwyższym punktem kapliczki")
+    if roof:
+        others = faces_with_material(groups, lambda m: not any(
+            k in m for k in ("roof", "dach", "cross", "spire", "sygnaturka")))
+        if others and max(v[1] for f in roof for v in f) < max(v[1] for v in others) - 1e-6:
+            err(name, "dach kapliczki nie wieńczy bryły")
+    w, h, d = (extent(verts, a) for a in (0, 1, 2))
+    if w * d > 25:
+        err(name, "kapliczka za duża w planie (%.1f m2 > 25 — ma być mniejsza od domów)" % (w * d))
+    if h > 7:
+        err(name, "kapliczka za wysoka (%.1f > 7 m)" % h)
+
+
+def check_bridge(name, groups):
+    rope_v = [v for f in mat_faces(groups, "rope", "lina") for v in f]
+    if not rope_v:
+        err(name, "mostek bez lin nośnych (materiał 'rope*'/'lina*')")
+        return
+    axis = 0 if extent(rope_v, 0) >= extent(rope_v, 2) else 2
+    perp = 2 if axis == 0 else 0
+    if max(extent(rope_v, 0), extent(rope_v, 2)) < 4:
+        err(name, "mostek za krótki (< 4 m)")
+    strands = sorted({round(v[perp], 1) for v in rope_v})
+    spread = (strands[-1] - strands[0]) if strands else 0
+    if len(strands) < 2 or spread < 0.4:
+        err(name, "wymagane >= 2 liny nośne rozstawione >= 0.4 m w poprzek")
+    t0 = min(v[axis] for v in rope_v)
+    t1 = max(v[axis] for v in rope_v)
+    span = max(t1 - t0, 1e-9)
+    ends = [v[1] for v in rope_v if (v[axis] - t0) / span < 0.15 or (v[axis] - t0) / span > 0.85]
+    mid = [v[1] for v in rope_v if 0.4 <= (v[axis] - t0) / span <= 0.6]
+    if not mid or not ends:
+        err(name, "liny bez punktów pośrednich — nie da się ocenić zwisu")
+    elif min(mid) > min(ends) - 0.2:
+        err(name, "liny bez zwisu (środek %.2f, końce %.2f — wymagane >= 0.2 m niżej)"
+            % (min(mid), min(ends)))
+    if len(mat_faces(groups, "plank", "deck")) < 8:
+        err(name, "mostek bez desek (>= 8 ścianek 'plank*'/'deck*')")
+
+
+def check_prop_barrel(name, groups):
+    verts = all_vertices(groups)
+    h = extent(verts, 1)
+    if not (0.6 <= h <= 1.3):
+        err(name, "beczka: wysokość %.2f poza [0.6, 1.3]" % h)
+    w, d = extent(verts, 0), extent(verts, 2)
+    if max(w, d) > 1.4 * min(w, d):
+        err(name, "beczka nie jest obła (przekrój %.2f x %.2f zbyt spłaszczony)" % (w, d))
+    if len(verts) < 24:
+        err(name, "beczka zbyt kanciasta (< 24 wierzchołków)")
+    hoops = mat_faces(groups, "hoop", "band", "obrecz")
+    levels = {round(sum(v[1] for v in f) / len(f), 1) for f in hoops}
+    if len(levels) < 2:
+        err(name, "beczka: wymagane >= 2 obręcze 'hoop*'/'band*' na różnych wysokościach")
+
+
+def check_prop_crate(name, groups):
+    verts = all_vertices(groups)
+    for ax, label in ((0, "X"), (1, "Y"), (2, "Z")):
+        e = extent(verts, ax)
+        if not (0.4 <= e <= 1.3):
+            err(name, "skrzynia: wymiar %s = %.2f poza [0.4, 1.3]" % (label, e))
+    if len(mat_faces(groups, "slat", "trim", "listwa")) < 4:
+        err(name, "skrzynia bez listew (>= 4 ścianki 'slat*'/'trim*')")
+
+
+def check_bush(name, groups):
+    verts = all_vertices(groups)
+    h = extent(verts, 1)
+    if not (0.5 <= h <= 1.5):
+        err(name, "krzew: wysokość %.2f poza [0.5, 1.5]" % h)
+    if not (mat_faces(groups, "bush", "leaves", "green")):
+        err(name, "krzew bez zieleni (materiał 'bush*'/'leaves*')")
+    if len(verts) < 12:
+        err(name, "krzew zbyt prosty (< 12 wierzchołków)")
+    if len({round(v[1], 1) for v in verts}) < 3:
+        err(name, "krzew zbyt regularny (< 3 poziomy wysokości — ma być nieregularna bryła)")
+
+
 SPECIFIC = {
     "terrain": check_terrain,
     "water": check_water,
@@ -352,6 +585,12 @@ SPECIFIC = {
     "tree": check_tree,
     "rocks": check_rocks,
     "path": check_path,
+    "wall": check_wall,
+    "chapel": check_chapel,
+    "bridge": check_bridge,
+    "prop_barrel": check_prop_barrel,
+    "prop_crate": check_prop_crate,
+    "bush": check_bush,
 }
 
 SPECIFIC_V2 = {
@@ -371,6 +610,8 @@ def main():
         return 0
 
     budgets = json.loads(BUDGETS.read_text(encoding="utf-8"))["parts"]
+    floors = json.loads((ROOT / "scripts" / "versions_floor.json")
+                        .read_text(encoding="utf-8"))["parts"]
     for path in modules:
         name = path.stem
         try:
@@ -380,6 +621,13 @@ def main():
             continue
         if not hasattr(mod, "build"):
             err(name, "brak funkcji build()")
+            continue
+        version = getattr(mod, "CONTRACT_VERSION", 1)
+        floor = floors.get(name)
+        if floor is not None and version < floor:
+            err(name, "CONTRACT_VERSION=%d poniżej podłogi %d "
+                "(scripts/versions_floor.json; LESSON-003 — wersji nie wolno obniżać)"
+                % (version, floor))
             continue
         try:
             groups = mod.build()
@@ -393,10 +641,17 @@ def main():
         budget = budgets.get(name, budgets["default"])
         if not check_common(name, groups, budget):
             continue
+        # dispatch wersjonowany: terrain v3 (wyspa) ZASTĘPUJE asercje v1/v2
+        # pasa wybrzeża (decyzja architekta w ART_DIRECTION.md)
+        if name == "terrain" and version >= 3:
+            check_terrain_v3(name, groups)
+            continue
         if name in SPECIFIC:
             SPECIFIC[name](name, groups)
-        if getattr(mod, "CONTRACT_VERSION", 1) >= 2 and name in SPECIFIC_V2:
+        if version >= 2 and name in SPECIFIC_V2:
             SPECIFIC_V2[name](name, groups)
+        if version >= 3 and name == "house":
+            check_house_v3(name, mod)
 
     if errors:
         print("FAIL — check_parts (%d problemów):" % len(errors))

@@ -106,6 +106,13 @@ def main():
             print("FAIL: scene.py nie utworzył out/town.obj")
             return 1
         version = scene_version()
+        floor = json.loads((ROOT / "scripts" / "versions_floor.json")
+                           .read_text(encoding="utf-8"))["scene"]
+        if version < floor:
+            print("FAIL: SCENE_VERSION=%d poniżej podłogi %d "
+                  "(scripts/versions_floor.json; LESSON-003 — wersji nie wolno obniżać)"
+                  % (version, floor))
+            return 1
 
     verts, groups, mtllib, usemtl_all = parse_obj(obj)
 
@@ -255,6 +262,137 @@ def main():
                 err("v2: pomost nie sięga >= 8 m w morze (max odległość od lądu %.1f m)" % max(d_land))
         else:
             err("v2: teren nie ma lądu (brak wierzchołków y > 0.05)")
+
+    # ----- zaostrzenia v3 (aktywne od SCENE_VERSION >= 3): wyspa wg ART_DIRECTION -----
+    if version >= 3:
+        def gcent(group_map_or_name):
+            gm = group_map_or_name if isinstance(group_map_or_name, dict) else {0: group_map_or_name}
+            vs = verts_of(gm)
+            return (sum(v[0] for v in vs) / len(vs), sum(v[2] for v in vs) / len(vs))
+
+        def d2(a, b):
+            return math.hypot(a[0] - b[0], a[1] - b[1])
+
+        chapel = members("chapel")
+        bridge = members("bridge")
+        walls = members("wall")
+        stairs = members("stair")
+        barrels = members("barrel") or members("prop_barrel")
+        crates = members("crate") or members("prop_crate")
+        bushes = members("bush")
+
+        # latarnia na najwyższym plateau
+        lc = gcent(lighthouse)
+        if nearest_terrain_y(*lc) < max(v[1] for v in tverts) - 1.0:
+            err("v3: latarnia nie stoi na najwyższym plateau (teren pod nią %.1f, max %.1f)"
+                % (nearest_terrain_y(*lc), max(v[1] for v in tverts)))
+
+        # >= 9 domów, ciasno, >= 3 archetypy, nazwy house_<k>_<archetyp>
+        if len(houses) < 9:
+            err("v3: za mało domów (%d < 9)" % len(houses))
+        cents = {n: gcent({n: g}) for n, g in houses.items()}
+        for n, c in cents.items():
+            others = [d2(c, c2) for n2, c2 in cents.items() if n2 != n]
+            if others and min(others) > 12:
+                err("v3: %s bez sąsiada w promieniu 12 m (najbliższy %.1f m)" % (n, min(others)))
+        suffixes = {"two_story" if n.endswith("two_story") else n.split("_")[-1]
+                    for n in houses}
+        missing_arch = {"timber", "stone", "two_story"} - suffixes
+        if missing_arch:
+            err("v3: brak archetypów w nazwach grup domów (house_<k>_<archetyp>): %s"
+                % ", ".join(sorted(missing_arch)))
+        for n, g in sorted(houses.items()):
+            arch = "two_story" if n.endswith("two_story") else n.split("_")[-1]
+            mats_join = " ".join(g["mats"])
+            hv = [verts[i] for i in g["verts"]]
+            height = max(v[1] for v in hv) - min(v[1] for v in hv)
+            if arch == "timber" and "beam" not in mats_join and "timber" not in mats_join:
+                err("v3: %s bez belek muru pruskiego (materiał 'beam*'/'timber*')" % n)
+            if arch == "stone" and "stone" not in mats_join:
+                err("v3: %s bez kamienia (materiał 'stone*')" % n)
+            if arch == "two_story" and height < 5.0:
+                err("v3: %s za niski jak na dwukondygnacyjny (%.1f < 5 m)" % (n, height))
+
+        # kapliczka na turni rozłącznej z masywem, połączonej mostkiem
+        if not chapel:
+            err("v3: brak kapliczki (grupy chapel*)")
+        if not bridge:
+            err("v3: brak mostka linowego (grupy bridge*)")
+        if chapel and houses:
+            cc = gcent(chapel)
+            ch_ground = nearest_terrain_y(*cc)
+            if ch_ground < 3.0:
+                err("v3: turnia kapliczki za niska (teren %.1f < 3 m)" % ch_ground)
+            dists = {n: d2(cc, c) for n, c in cents.items()}
+            nearest_house = min(dists, key=dists.get) if dists else None
+            if nearest_house and dists[nearest_house] < 6.0:
+                err("v3: kapliczka za blisko zabudowy (%.1f m < 6 — ma stać na osobnej turni)"
+                    % dists[nearest_house])
+            if nearest_house:
+                hc = cents[nearest_house]
+                hy = nearest_terrain_y(*hc)
+                saddle = min(nearest_terrain_y(cc[0] + (hc[0] - cc[0]) * t / 20.0,
+                                               cc[1] + (hc[1] - cc[1]) * t / 20.0)
+                             for t in range(21))
+                if saddle > min(ch_ground, hy) - 1.5:
+                    err("v3: turnia nie jest rozłączna z masywem (brak przełęczy: siodło %.1f "
+                        "vs końce %.1f/%.1f, wymagane >= 1.5 m niżej)" % (saddle, ch_ground, hy))
+        if chapel and bridge:
+            bv = [(v[0], v[2]) for v in verts_of(bridge)]
+            cv = [(v[0], v[2]) for v in verts_of(chapel)]
+            d_ch = min(d2(a, b) for a in bv for b in cv)
+            if d_ch > 5.0:
+                err("v3: mostek nie dochodzi do turni kapliczki (%.1f m > 5)" % d_ch)
+            vil = [(verts[i][0], verts[i][2]) for g in houses.values() for i in g["verts"]] + \
+                  [(verts[i][0], verts[i][2]) for g in walls.values() for i in g["verts"]]
+            if vil:
+                d_vil = min(d2(a, b) for a in bv for b in vil)
+                if d_vil > 6.0:
+                    err("v3: mostek nie dochodzi do poziomu wioski (%.1f m > 6)" % d_vil)
+
+        # mur oporowy i schody
+        if len(walls) < 2:
+            err("v3: za mało segmentów muru oporowego (%d grup wall* < 2)" % len(walls))
+        if not stairs:
+            err("v3: brak schodów między tarasami (grupy stair*)")
+
+        # pomosty i rekwizyty
+        pier_groups = members("pier")
+        if len(pier_groups) < 2:
+            err("v3: za mało segmentów pomostów (%d grup pier* < 2)" % len(pier_groups))
+        pier_xz = [(v[0], v[2]) for v in verts_of(pier)]
+        quay = [(v[0], v[2]) for v in tverts if 0.0 <= v[1] <= 1.0]
+        if len(barrels) < 4:
+            err("v3: za mało beczek (%d grup barrel* < 4)" % len(barrels))
+        if len(crates) < 3:
+            err("v3: za mało skrzyń (%d grup crate* < 3)" % len(crates))
+        for n, g in sorted({**barrels, **crates}.items()):
+            c = gcent({n: g})
+            d_pier = min((d2(c, p) for p in pier_xz), default=1e9)
+            d_quay = min((d2(c, q) for q in quay), default=1e9)
+            if d_pier > 5.0 and d_quay > 3.0:
+                err("v3: %s nie stoi na pomoście ani nabrzeżu (pomost %.1f m, nabrzeże %.1f m)"
+                    % (n, d_pier, d_quay))
+
+        # krzewy między zabudową
+        if len(bushes) < 8:
+            err("v3: za mało krzewów (%d grup bush* < 8)" % len(bushes))
+        for n, g in sorted(bushes.items()):
+            c = gcent({n: g})
+            if cents and min(d2(c, hc) for hc in cents.values()) > 10:
+                err("v3: %s rośnie z dala od zabudowy (> 10 m od najbliższego domu)" % n)
+
+        # zatoczka: łódka na piasku (nie w wodzie)
+        beach_boats = [n for n, g in boats.items()
+                       if nearest_terrain_y(*gcent({n: g})) > 0.05]
+        if not beach_boats:
+            err("v3: brak łódki na plaży zatoczki (boat* nad lądem; w wodzie to nie plaża)")
+
+        # pierścień skał w wodzie poza obrysem wyspy
+        wet_rocks = [n for n, g in rocks.items()
+                     if nearest_terrain_y(*gcent({n: g})) < -0.2]
+        if len(wet_rocks) < 8:
+            err("v3: za mało głazów w wodzie wokół wyspy (%d < 8)" % len(wet_rocks))
 
     # budżety sceny
     budget = json.loads(BUDGETS.read_text(encoding="utf-8"))["scene"]

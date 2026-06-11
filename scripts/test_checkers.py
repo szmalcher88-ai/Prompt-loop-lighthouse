@@ -67,6 +67,28 @@ def main():
     expect("scene v2: stara scena (wyspa) NIE przechodzi v2", "check_scene.py",
            [FX / "scene_good.obj", 2], 1, must_contain="v2")
 
+    print("check_parts (kontrakt v3 + podłoga wersji):")
+    expect("parts v3 known-good -> 0 (terrain/house/wall/chapel/bridge/propsy/bush)",
+           "check_parts.py", [FX / "parts_good_v3"], 0)
+    expect("parts v3 known-bad: wyspa bez tarasów", "check_parts.py",
+           [FX / "parts_bad_v3"], 1, must_contain="tarasowych")
+    expect("parts v3 known-bad: archetypy nieodróżnialne", "check_parts.py",
+           [FX / "parts_bad_v3"], 1, must_contain="nieodróżnialne")
+    expect("parts v3 known-bad: mostek bez zwisu", "check_parts.py",
+           [FX / "parts_bad_v3"], 1, must_contain="zwisu")
+    expect("parts known-bad: wersja poniżej podłogi (LESSON-003)", "check_parts.py",
+           [FX / "parts_bad_floor"], 1, must_contain="podłogi")
+
+    print("check_scene (v3):")
+    expect("scene v3 known-good -> 0", "check_scene.py",
+           [FX / "scene_good_v3.obj", 3], 0)
+    expect("scene v3 known-bad: brak kapliczki", "check_scene.py",
+           [FX / "scene_bad_v3.obj", 3], 1, must_contain="kaplic")
+    expect("scene v3 known-bad: łódka nie na plaży", "check_scene.py",
+           [FX / "scene_bad_v3.obj", 3], 1, must_contain="plaż")
+    expect("scene v3: scena v2 (pas wybrzeża) NIE przechodzi v3", "check_scene.py",
+           [FX / "scene_good_v2.obj", 3], 1, must_contain="v3")
+
     print("render_test:")
     with tempfile.TemporaryDirectory() as tmp:
         expect("render known-good -> 0", "render_test.py", [FX / "scene_good.obj", tmp], 0)
@@ -79,6 +101,12 @@ def main():
     with tempfile.TemporaryDirectory() as tmp:
         expect("render v2 known-bad: kadr luźny (scena rozrzedzona)", "render_test.py",
                [FX / "scene_sparse.obj", tmp, 2], 1, must_contain="kadru")
+    with tempfile.TemporaryDirectory() as tmp:
+        expect("render v3 known-good -> 0 (kadr w pasmie 30-70)", "render_test.py",
+               [FX / "scene_good_v3.obj", tmp, 3], 0)
+    with tempfile.TemporaryDirectory() as tmp:
+        expect("render v3 known-bad: kadr luźny", "render_test.py",
+               [FX / "scene_sparse.obj", tmp, 3], 1, must_contain="kadru")
 
     if failures:
         print("FAIL — test_checkers (%d problemów):" % len(failures))

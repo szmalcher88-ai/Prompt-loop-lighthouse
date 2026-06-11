@@ -1,15 +1,21 @@
 {
   "parts": {
-    "default":    {"max_vertices": 20000, "max_faces": 40000},
-    "terrain":    {"max_vertices": 20000, "max_faces": 40000},
-    "water":      {"max_vertices": 2000,  "max_faces": 4000},
-    "lighthouse": {"max_vertices": 5000,  "max_faces": 10000},
-    "house":      {"max_vertices": 4000,  "max_faces": 8000},
-    "pier":       {"max_vertices": 3000,  "max_faces": 6000},
-    "boat":       {"max_vertices": 1500,  "max_faces": 3000},
-    "tree":       {"max_vertices": 800,   "max_faces": 1600},
-    "rocks":      {"max_vertices": 3000,  "max_faces": 6000},
-    "path":       {"max_vertices": 2000,  "max_faces": 4000}
+    "default":     {"max_vertices": 20000, "max_faces": 40000},
+    "terrain":     {"max_vertices": 20000, "max_faces": 40000},
+    "water":       {"max_vertices": 2000,  "max_faces": 4000},
+    "lighthouse":  {"max_vertices": 5000,  "max_faces": 10000},
+    "house":       {"max_vertices": 4000,  "max_faces": 8000},
+    "pier":        {"max_vertices": 3000,  "max_faces": 6000},
+    "boat":        {"max_vertices": 1500,  "max_faces": 3000},
+    "tree":        {"max_vertices": 800,   "max_faces": 1600},
+    "rocks":       {"max_vertices": 3000,  "max_faces": 6000},
+    "path":        {"max_vertices": 2000,  "max_faces": 4000},
+    "wall":        {"max_vertices": 6000,  "max_faces": 12000},
+    "chapel":      {"max_vertices": 3000,  "max_faces": 6000},
+    "bridge":      {"max_vertices": 1500,  "max_faces": 3000},
+    "prop_barrel": {"max_vertices": 300,   "max_faces": 600},
+    "prop_crate":  {"max_vertices": 300,   "max_faces": 600},
+    "bush":        {"max_vertices": 400,   "max_faces": 800}
   },
-  "scene": {"max_vertices": 250000, "max_faces": 300000}
+  "scene": {"max_vertices": 800000, "max_faces": 1000000}
 }
