@@ -21,7 +21,7 @@
   "agent_timeout_seconds": 1200,
   "verify_timeout_seconds": 600,
 
-  "protected_paths": ["tests/", "scripts/", ".github/", "loop.py", "loop.config.json", "PROMPT.template.md", "README.md", "INSTRUKCJE-KOLEJNA-SESJA.md", "ROZBIEZNOSCI.md", "parts/README.md", "LESSONS/", "budgets.json"],
+  "protected_paths": ["tests/", "scripts/", ".github/", "loop.py", "loop.config.json", "PROMPT.template.md", "README.md", "INSTRUKCJE-KOLEJNA-SESJA.md", "ROZBIEZNOSCI.md", "parts/README.md", "LESSONS/", "budgets.json", "ART_DIRECTION.md", "art/"],
   "max_diff_lines": 800,
 
   "feedback_tail_chars": 4000,

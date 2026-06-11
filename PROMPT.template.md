@@ -12,6 +12,10 @@ PRZECZYTAJ; build(**params) -> lista grup, deterministycznie, zero I/O)
 `out/town.obj` + `out/town.mtl` (katalog `out/` jest w .gitignore).
 Istnieje też `lighthouse.py` (generator latarni, zapisuje out/lighthouse.obj).
 Układ współrzędnych: Y-up, jednostki ~metry, poziom morza y=0.
+Gwiazda polarna estetyki: `ART_DIRECTION.md` (dekompozycja referencji na
+wymagania — przeczytaj sekcje dotyczące Twojego zadania; układ to WYSPA,
+zatoczka z plażą od strony -Z). Wersje kontraktów mają podłogę
+(scripts/versions_floor.json) — wersji nie wolno obniżać.
 
 Definicja "zrobione": PEŁNY łańcuch weryfikatorów kończy się kodem 0
 (lista w sekcji zasad poniżej). Weryfikatory w `scripts/` to sygnał prawdy —
