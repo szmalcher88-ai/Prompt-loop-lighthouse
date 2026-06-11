@@ -1,15 +1,19 @@
 # -*- coding: utf-8 -*-
-"""Czesc: parametryczny dom mieszkalny jako zestaw nazwanych grup (kontrakt v2).
+"""Czesc: parametryczny dom mieszkalny jako zestaw nazwanych grup (kontrakt v3).
 
 Kontrakt parts/README.md: build(**params) -> lista grup, deterministycznie,
 zero I/O, czysty stdlib. Uklad Y-up, jednostki ~metry, os bryly w (x=0, z=0).
 Cokol/fundament siega podstawy domu (najnizszy element); sciany staja na nim.
 
 Parametry (wszystkie opcjonalne, maja sensowne domysly):
-  width       - szerokosc scian wzdluz X (domyslnie 6.0),
-  depth       - glebokosc scian wzdluz Z (domyslnie 5.0),
-  height      - wysokosc scian (domyslnie 3.0); calkowita wysokosc = height +
-                wzniesienie dachu i miesci sie w [2, 15],
+  archetype   - styl bryly: 'timber' (mur pruski), 'stone' (chata kamienna,
+                1 kondygnacja, niska), 'two_story' (dom dwukondygnacyjny);
+                domyslnie 'timber'. Archetyp ustala domyslne wymiary/wysokosc
+                i detal (belki muru pruskiego / kamien / 2 pasma okien),
+  width       - szerokosc scian wzdluz X (domyslnie wg archetypu),
+  depth       - glebokosc scian wzdluz Z (domyslnie wg archetypu),
+  height      - wysokosc scian (domyslnie wg archetypu); calkowita wysokosc =
+                height + wzniesienie dachu i miesci sie w [2, 15],
   wall_color  - kolor scian (r, g, b) w [0, 1] (domyslnie piaskowy),
   roof_color  - kolor dachu (r, g, b) w [0, 1] (domyslnie ceglasty),
   window_color- kolor szyb (r, g, b) w [0, 1] (domyslnie szklisty blekit),
@@ -17,10 +21,13 @@ Parametry (wszystkie opcjonalne, maja sensowne domysly):
 
 Grupy (kazda z wlasnymi, LOKALNYMI wierzcholkami 0-based):
   foundation - cokol/fundament siegajacy podstawy (material 'foundation'),
-  walls      - prostopadloscienne sciany z jitterem odcienia (material 'wall_i'),
+  walls      - prostopadloscienne sciany z jitterem odcienia (material 'wall_i'
+               lub 'stone_i' dla archetypu kamiennego),
   roof       - dwuspadowy dach (material 'roof', centroid powyzej scian),
   chimney    - komin wystajacy ponad kalenice (material 'chimney'),
-  windows    - okna: ramy (material 'frame') + szyby (material 'glass'),
+  windows    - okna: ramy (material 'frame') + szyby (material 'glass');
+               'two_story' ma 2 pasma okien rozdzielone > 1.2 m,
+  beams      - belki muru pruskiego na elewacji (tylko 'timber', material 'beam'),
   door       - drzwi siegajace podloza domu (material 'door').
 
 Weryfikator check_parts.check_house (v1): wysokosc w [2, 15]; scianki dachu
@@ -28,9 +35,23 @@ Weryfikator check_parts.check_house (v1): wysokosc w [2, 15]; scianki dachu
 check_house_v2 (CONTRACT_VERSION >= 2): >= 2 szyby 'glass*'/'window*';
 >= 4 scianki ram 'frame*'; komin 'chimney*' >= 0.2 m ponad kalenica;
 fundament 'foundation*'/'plinth*' siegajacy podstawy. Losowosc tylko przez `seed`.
+check_house_v3 (CONTRACT_VERSION >= 3): build(archetype=...) z trzema
+archetypami o istotnie roznej geometrii — 'timber': >= 6 belek 'beam*';
+'stone': wysokosc <= 4.5 m, >= 6 scianek 'stone*', 1 pasmo okien;
+'two_story': wysokosc >= 5 m, >= 2 pasma okien. Kazdy archetyp spelnia v1+v2.
 """
 
 import random
+
+# Domyslne wymiary i detal per archetyp (parametry moga je nadpisac w scene).
+_ARCHETYPES = {
+    "timber":    {"width": 6.0, "depth": 5.0, "wall_h": 3.2, "roof_rise": 1.6,
+                  "wall_mat": "wall",  "beams": True,  "stories": 1},
+    "stone":     {"width": 6.6, "depth": 5.4, "wall_h": 2.4, "roof_rise": 1.2,
+                  "wall_mat": "stone", "beams": False, "stories": 1},
+    "two_story": {"width": 5.6, "depth": 4.6, "wall_h": 5.4, "roof_rise": 1.6,
+                  "wall_mat": "wall",  "beams": False, "stories": 2},
+}
 
 
 def _new_group(name, colors):
@@ -75,9 +96,16 @@ def _box_shaded(g, base_name, base_color, rng, x0, x1, y0, y1, z0, z1):
 
 
 def build(**params):
-    width = float(params.get("width", 6.0))
-    depth = float(params.get("depth", 5.0))
-    wall_h = float(params.get("height", 3.0))
+    archetype = params.get("archetype", "timber")
+    if archetype not in _ARCHETYPES:
+        raise ValueError("nieznany archetyp %r" % archetype)
+    cfg = _ARCHETYPES[archetype]
+
+    width = float(params.get("width", cfg["width"]))
+    depth = float(params.get("depth", cfg["depth"]))
+    wall_h = float(params.get("height", cfg["wall_h"]))
+    roof_rise = float(params.get("roof_rise", cfg["roof_rise"]))
+    wall_mat = cfg["wall_mat"]
     wall_color = tuple(_clamp01(c) for c in params.get("wall_color", (0.82, 0.78, 0.70)))
     roof_color = tuple(_clamp01(c) for c in params.get("roof_color", (0.52, 0.18, 0.14)))
     window_color = tuple(_clamp01(c) for c in params.get("window_color", (0.55, 0.70, 0.80)))
@@ -85,7 +113,6 @@ def build(**params):
 
     hx, hz = width / 2.0, depth / 2.0
     overhang = 0.3
-    roof_rise = 2.0          # wzniesienie kalenicy ponad sciany
     ridge_y = wall_h + roof_rise
     plinth_bottom = -0.3     # cokol siega ponizej podstawy scian (y=0)
 
@@ -99,7 +126,7 @@ def build(**params):
 
     # --- walls: prostopadloscienne sciany (y 0..wall_h), jitter odcienia ---
     walls = _new_group("walls", {})
-    _box_shaded(walls, "wall", wall_color, rng, -hx, hx, 0.0, wall_h, -hz, hz)
+    _box_shaded(walls, wall_mat, wall_color, rng, -hx, hx, 0.0, wall_h, -hz, hz)
     groups.append(walls)
 
     # --- roof: dwuspadowy dach z kalenica wzdluz osi X ---
@@ -127,22 +154,38 @@ def build(**params):
         chimney, cxh - 0.22, cxh + 0.22, wall_h, ridge_y + 0.4, -0.22, 0.22)]
     groups.append(chimney)
 
-    # --- windows: okna na scianie tylnej (+z) — ramy 'frame' + szyby 'glass' ---
+    # --- windows: okna na scianie tylnej (+z) — ramy 'frame' + szyby 'glass'.
+    # 'two_story' dostaje 2 pasma (parter + pietro) rozdzielone > 1.2 m. ---
     windows = _new_group("windows", {"frame": (0.92, 0.92, 0.90), "glass": window_color})
     win_w = min(0.9, width * 0.18)
     win_h = 0.8
-    cy = wall_h * 0.5
-    for sx in (-width * 0.25, width * 0.25):
-        # rama (framuga) — nieco wieksza, lekko wystaje na zewnatrz (+z)
-        windows["faces"].extend(("frame", f) for f in _box(
-            windows, sx - (win_w + 0.14) / 2.0, sx + (win_w + 0.14) / 2.0,
-            cy - (win_h + 0.14) / 2.0, cy + (win_h + 0.14) / 2.0,
-            hz - 0.02, hz + 0.05))
-        # szyba — w obrysie ramy, lekko z przodu, by byla widoczna
-        windows["faces"].extend(("glass", f) for f in _box(
-            windows, sx - win_w / 2.0, sx + win_w / 2.0,
-            cy - win_h / 2.0, cy + win_h / 2.0, hz + 0.02, hz + 0.07))
+    if cfg["stories"] == 2:
+        band_cys = [wall_h * 0.27, wall_h * 0.73]
+    else:
+        band_cys = [wall_h * 0.5]
+    for cy in band_cys:
+        for sx in (-width * 0.25, width * 0.25):
+            # rama (framuga) — nieco wieksza, lekko wystaje na zewnatrz (+z)
+            windows["faces"].extend(("frame", f) for f in _box(
+                windows, sx - (win_w + 0.14) / 2.0, sx + (win_w + 0.14) / 2.0,
+                cy - (win_h + 0.14) / 2.0, cy + (win_h + 0.14) / 2.0,
+                hz - 0.02, hz + 0.05))
+            # szyba — w obrysie ramy, lekko z przodu, by byla widoczna
+            windows["faces"].extend(("glass", f) for f in _box(
+                windows, sx - win_w / 2.0, sx + win_w / 2.0,
+                cy - win_h / 2.0, cy + win_h / 2.0, hz + 0.02, hz + 0.07))
     groups.append(windows)
+
+    # --- beams: belki muru pruskiego na elewacji przedniej (-z) — tylko timber ---
+    if cfg["beams"]:
+        beams = _new_group("beams", {"beam": (0.30, 0.20, 0.12)})
+        for bx in (-hx + 0.4, -hx * 0.4, hx * 0.4, hx - 0.4):
+            beams["faces"].extend(("beam", f) for f in _box(
+                beams, bx - 0.08, bx + 0.08, 0.2, wall_h, -hz - 0.04, -hz + 0.0))
+        belt = wall_h * 0.55
+        beams["faces"].extend(("beam", f) for f in _box(
+            beams, -hx, hx, belt - 0.08, belt + 0.08, -hz - 0.04, -hz + 0.0))
+        groups.append(beams)
 
     # --- door: drzwi przy scianie przedniej (-z), siegajace podloza ---
     door = _new_group("door", {"door": (0.30, 0.18, 0.09)})
@@ -157,4 +200,4 @@ def build(**params):
 
     return groups
 
-CONTRACT_VERSION = 2
+CONTRACT_VERSION = 3

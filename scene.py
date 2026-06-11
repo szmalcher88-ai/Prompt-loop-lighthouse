@@ -46,37 +46,46 @@ def _ell(r, phi_deg):
 # na to, ze latarnia pozostaje najwyzszym elementem sceny).
 LIGHTHOUSE_EMBED = 0.8
 
-# Domy o zroznicowanych parametrach rozstawione na tarasie srodkowym wyspy
-# (r=0.52 -> teren y=5.5) pierscieniem wokol latarni, z dala od zatoczki (-Z).
-# Kat phi dobrany tak, aby AABB w XZ byly rozlaczne miedzy soba i z latarnia.
-# Kazda instancja rozni sie wymiarami ORAZ kolorami (sciany + dach + szyby) —
-# asercja v2 "domy parami rozne" (check_scene).
-_HOUSE_SPOTS = [
-    (0.52, 20.0), (0.52, 59.0), (0.52, 98.0),
-    (0.52, 137.0), (0.52, 176.0), (0.52, 215.0),
-]
-_HOUSE_PARAMS = [
-    {"width": 5.0, "depth": 4.0, "height": 2.6,
+# Domy (>= 9) rozstawione pierscieniem na tarasie srodkowym wyspy (r=0.45 ->
+# teren y=5.5) wokol latarni. Trzy archetypy (parts/house.py v3): timber / stone
+# / two_story uzyte po 3 razy, w grupach nazwanych house_<k>_<archetyp>. Phi co
+# 40 stopni daje rozlaczne AABB w XZ (miedzy soba i z latarnia) oraz kazdemu
+# domowi sasiada <= 12 m. Kazda instancja rozni sie archetypem albo wymiarami i
+# kolorami (sciany + dach + szyby) — asercja v2 "domy parami rozne" (check_scene).
+_HOUSE_RING_R = 0.45
+_HOUSE_SPECS = [
+    {"archetype": "timber", "width": 6.0, "depth": 5.0,
      "wall_color": (0.85, 0.80, 0.70), "roof_color": (0.55, 0.20, 0.15),
      "window_color": (0.52, 0.68, 0.80), "seed": 11},
-    {"width": 6.0, "depth": 5.0, "height": 3.0,
-     "wall_color": (0.72, 0.62, 0.52), "roof_color": (0.40, 0.28, 0.22),
+    {"archetype": "stone", "width": 6.6, "depth": 5.4,
+     "wall_color": (0.60, 0.58, 0.54), "roof_color": (0.40, 0.28, 0.22),
      "window_color": (0.58, 0.72, 0.82), "seed": 12},
-    {"width": 5.5, "depth": 4.5, "height": 2.8,
-     "wall_color": (0.68, 0.74, 0.80), "roof_color": (0.30, 0.36, 0.40),
+    {"archetype": "two_story", "width": 5.6, "depth": 4.6,
+     "wall_color": (0.78, 0.74, 0.66), "roof_color": (0.30, 0.36, 0.40),
      "window_color": (0.50, 0.66, 0.78), "seed": 13},
-    {"width": 6.5, "depth": 5.0, "height": 3.2,
+    {"archetype": "timber", "width": 6.6, "depth": 4.6,
      "wall_color": (0.82, 0.56, 0.46), "roof_color": (0.48, 0.16, 0.12),
      "window_color": (0.60, 0.74, 0.84), "seed": 14},
-    {"width": 5.0, "depth": 5.5, "height": 2.7,
-     "wall_color": (0.60, 0.70, 0.56), "roof_color": (0.34, 0.30, 0.20),
+    {"archetype": "stone", "width": 7.0, "depth": 5.8,
+     "wall_color": (0.56, 0.55, 0.52), "roof_color": (0.34, 0.30, 0.20),
      "window_color": (0.54, 0.70, 0.80), "seed": 15},
-    {"width": 5.0, "depth": 4.0, "height": 3.4,
+    {"archetype": "two_story", "width": 6.0, "depth": 5.0,
      "wall_color": (0.88, 0.84, 0.62), "roof_color": (0.58, 0.24, 0.18),
      "window_color": (0.56, 0.71, 0.83), "seed": 16},
+    {"archetype": "timber", "width": 5.6, "depth": 5.4,
+     "wall_color": (0.80, 0.72, 0.60), "roof_color": (0.50, 0.22, 0.16),
+     "window_color": (0.53, 0.69, 0.81), "seed": 17},
+    {"archetype": "stone", "width": 6.2, "depth": 5.0,
+     "wall_color": (0.62, 0.60, 0.56), "roof_color": (0.38, 0.30, 0.24),
+     "window_color": (0.55, 0.71, 0.79), "seed": 18},
+    {"archetype": "two_story", "width": 5.2, "depth": 4.2,
+     "wall_color": (0.74, 0.78, 0.72), "roof_color": (0.32, 0.34, 0.28),
+     "window_color": (0.51, 0.67, 0.80), "seed": 19},
 ]
-HOUSES = [{"x": _ell(r, phi)[0], "z": _ell(r, phi)[1], "params": p}
-          for (r, phi), p in zip(_HOUSE_SPOTS, _HOUSE_PARAMS)]
+HOUSES = []
+for _k, _spec in enumerate(_HOUSE_SPECS):
+    _x, _z = _ell(_HOUSE_RING_R, _k * 40.0)
+    HOUSES.append({"x": _x, "z": _z, "archetype": _spec["archetype"], "params": _spec})
 
 # Lodki na tafli morza (czesc parts/boat.py). Pomost zatoczki (os x=0) wychodzi
 # ku -Z poza obrys wyspy; jego srodek w XZ to okolo (0, -31). boat_1 cumuje tuz
@@ -253,10 +262,11 @@ def assemble():
         g["name"] = "lighthouse_" + g["name"]
     scene.extend(lighthouse)
 
-    # --- domy: scalone w pojedyncze grupy house_i, posadowione na terenie ---
+    # --- domy: scalone w pojedyncze grupy house_<k>_<archetyp>, posadowione na
+    # terenie. Nazwa niesie archetyp (timber/stone/two_story) wg parts/house.py v3. ---
     house_mod = _load_part("house")
     for i, spec in enumerate(HOUSES, start=1):
-        prefix = "house_%d" % i
+        prefix = "house_%d_%s" % (i, spec["archetype"])
         groups = house_mod.build(**spec["params"])
         _namespace_materials(groups, prefix)
         house = _merge(groups, prefix)
