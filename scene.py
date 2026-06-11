@@ -152,6 +152,22 @@ PATH_ROUTE = [
     (0.0, 0.0),      # rejon latarni (plateau, os 0, 0)
 ]
 
+# Mur oporowy i schody (czesc parts/wall.py). Tarasy wyspy opadaja od plateau
+# latarni (r=0) ku linii brzegowej; kamienne mury podtrzymuja krawedz tarasu
+# miedzy pierscieniem domow (r=0.52) a tarasem dolnym (r=0.65), a schody lacza
+# te poziomy. Segmenty stoja w lukach miedzy domami (phi domow: 20/59/98/137/
+# 176/215), kazdy obrocony stycznie do krawedzi (phi+90) i posadowiony na
+# terenie jak pozostale czesci. Grupy wall_1, wall_2 (mur) oraz stair_1 (bieg).
+_WALL_R = 0.585
+WALLS = [
+    {"phi": 78.0, "params": {"length": 9.0, "height": 1.6, "thickness": 0.6, "seed": 71}},
+    {"phi": 157.0, "params": {"length": 8.0, "height": 1.8, "thickness": 0.6, "seed": 72}},
+]
+STAIRS = [
+    {"phi": 117.0, "params": {"n_steps": 8, "step_rise": 0.22, "step_run": 0.4,
+                              "step_width": 1.8, "seed": 73}},
+]
+
 
 def _load_part(stem):
     path = PARTS / (stem + ".py")
@@ -165,6 +181,16 @@ def _translate(groups, dx, dy, dz):
     """Przesuwa wszystkie wierzcholki grup o (dx, dy, dz)."""
     for g in groups:
         g["vertices"] = [(x + dx, y + dy, z + dz) for (x, y, z) in g["vertices"]]
+    return groups
+
+
+def _rotate_y(groups, deg):
+    """Obraca wszystkie wierzcholki grup o kat deg (stopnie) wokol osi Y."""
+    a = math.radians(deg)
+    ca, sa = math.cos(a), math.sin(a)
+    for g in groups:
+        g["vertices"] = [(x * ca + z * sa, y, -x * sa + z * ca)
+                         for (x, y, z) in g["vertices"]]
     return groups
 
 
@@ -305,6 +331,37 @@ def assemble():
         g["vertices"] = [(x, _nearest_terrain_y(tverts, x, z) + 0.05, z)
                          for (x, y, z) in g["vertices"]]
     scene.extend(path)
+
+    # --- mury oporowe: segmenty wzdluz krawedzi tarasu, posadowione na terenie.
+    # Czesc wall.py zwraca mur i schody; tu bierzemy sam mur (include_stairs=
+    # False), obracamy stycznie do krawedzi (phi+90) i osadzamy podstawe (y=0)
+    # na wysokosci najblizszego wierzcholka terenu. Grupy wall_1, wall_2. ---
+    wall_mod = _load_part("wall")
+    for i, spec in enumerate(WALLS, start=1):
+        prefix = "wall_%d" % i
+        groups = wall_mod.build(include_stairs=False, **spec["params"])
+        _namespace_materials(groups, prefix)
+        seg = _merge(groups, prefix)
+        x, z = _ell(_WALL_R, spec["phi"])
+        _rotate_y([seg], spec["phi"] + 90.0)
+        _translate([seg], x, 0.0, z)
+        cx, cz = _centroid_xz(seg)
+        _translate([seg], 0.0, _nearest_terrain_y(tverts, cx, cz), 0.0)
+        scene.append(seg)
+
+    # --- schody: bieg laczacy poziomy tarasow (include_wall=False), obrocony
+    # stycznie i posadowiony na terenie jak mury. Grupa stair_1. ---
+    for i, spec in enumerate(STAIRS, start=1):
+        prefix = "stair_%d" % i
+        groups = wall_mod.build(include_wall=False, **spec["params"])
+        _namespace_materials(groups, prefix)
+        seg = _merge(groups, prefix)
+        x, z = _ell(_WALL_R, spec["phi"])
+        _rotate_y([seg], spec["phi"] + 90.0)
+        _translate([seg], x, 0.0, z)
+        cx, cz = _centroid_xz(seg)
+        _translate([seg], 0.0, _nearest_terrain_y(tverts, cx, cz), 0.0)
+        scene.append(seg)
 
     return scene
 
