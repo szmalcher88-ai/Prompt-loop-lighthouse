@@ -15,7 +15,13 @@ Układ współrzędnych: Y-up, jednostki ~metry, poziom morza y=0.
 Gwiazda polarna estetyki: `ART_DIRECTION.md` (dekompozycja referencji na
 wymagania — przeczytaj sekcje dotyczące Twojego zadania; układ to WYSPA,
 zatoczka z plażą od strony -Z). Wersje kontraktów mają podłogę
-(scripts/versions_floor.json) — wersji nie wolno obniżać.
+(scripts/versions_floor.json) — wersji nie wolno obniżać. Kontrakt v4
+(organiczny obrys wyspy, domy w gronach zamiast pierścienia, kapliczka po
+stronie kamery głównej) jest opisany w sekcjach v4 scripts/check_scene.py;
+DZIAŁAJĄCY wzorzec całej sceny v4 to scripts/fixtures/gen_scene_v4.py
+(tryb "good") — przeczytaj go przed pisaniem. Renderer Blendera
+(scripts/render_blender.py) to BRAMA po biegu, NIE jest w verify_commands —
+nie uruchamiaj go; sygnał prawdy pętli daje matplotlib (scripts/render_test.py).
 
 Definicja "zrobione": PEŁNY łańcuch weryfikatorów kończy się kodem 0
 (lista w sekcji zasad poniżej). Weryfikatory w `scripts/` to sygnał prawdy —
