@@ -24,8 +24,13 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-PARTS_DIR = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "parts"
+_args = [a for a in sys.argv[1:] if not a.startswith("--")]
+PARTS_DIR = Path(_args[0]) if _args else ROOT / "parts"
 BUDGETS = ROOT / "budgets.json"
+# Podłoga wersji (LESSON-003) to ratchet REALNEGO repo: egzekwujemy ją na biegu
+# domyślnym (bez argumentów) zawsze; na jawnym katalogu fixture'a tylko z flagą
+# --floor (inaczej fixture'y starszych kontraktów testują asercje, nie ratchet).
+ENFORCE_FLOOR = (not _args) or ("--floor" in sys.argv[1:])
 
 errors = []
 
@@ -624,7 +629,7 @@ def main():
             continue
         version = getattr(mod, "CONTRACT_VERSION", 1)
         floor = floors.get(name)
-        if floor is not None and version < floor:
+        if ENFORCE_FLOOR and floor is not None and version < floor:
             err(name, "CONTRACT_VERSION=%d poniżej podłogi %d "
                 "(scripts/versions_floor.json; LESSON-003 — wersji nie wolno obniżać)"
                 % (version, floor))

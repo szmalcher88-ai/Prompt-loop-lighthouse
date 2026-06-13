@@ -27,6 +27,9 @@ ROOT = Path(__file__).resolve().parent.parent
 SCENE = ROOT / "scene.py"
 BUDGETS = ROOT / "budgets.json"
 
+sys.path.insert(0, str(ROOT / "scripts"))
+import gate_cameras as gc  # noqa: E402  (stdlib-only, wspólne kamery bramy)
+
 errors = []
 
 
@@ -393,6 +396,95 @@ def main():
                      if nearest_terrain_y(*gcent({n: g})) < -0.2]
         if len(wet_rocks) < 8:
             err("v3: za mało głazów w wodzie wokół wyspy (%d < 8)" % len(wet_rocks))
+
+    # ----- zaostrzenia v4 (SCENE_VERSION >= 4): organiczny obrys, grona domów,
+    # kapliczka+mostek w kadrze głównym render_blender (gate_cameras) -----
+    if version >= 4:
+        # (a) domy w >= 3 gronach o różnej liczności (nie regularny pierścień)
+        hp = {n: gcent({n: g}) for n, g in houses.items()}
+        names_h = sorted(hp)
+        parent = {n: n for n in names_h}
+
+        def _find(a):
+            while parent[a] != a:
+                parent[a] = parent[parent[a]]
+                a = parent[a]
+            return a
+
+        for i, a in enumerate(names_h):
+            for b in names_h[i + 1:]:
+                if d2(hp[a], hp[b]) <= 7.5:
+                    parent[_find(a)] = _find(b)
+        clusters = {}
+        for n in names_h:
+            clusters.setdefault(_find(n), []).append(n)
+        sizes = sorted(len(c) for c in clusters.values())
+        if len(clusters) < 3:
+            err("v4: domy nie tworzą >= 3 gron (jest %d — to wciąż pierścień/równomierne)"
+                % len(clusters))
+        if sizes and min(sizes) < 2:
+            err("v4: grono-singleton (dom bez sąsiada <= 7.5 m — zabudowa ma być ciasna w gronach)")
+        if len(set(sizes)) < 2:
+            err("v4: grona jednakowej liczności %s — wymagane zróżnicowane rozmiary" % sizes)
+        # anty-pierścień: rozrzut promienia domów od ich wspólnego centroidu.
+        # Pierścień => promień ~stały (CoV ~0); grona => promień silnie zróżnicowany.
+        if len(names_h) >= 4:
+            gcx = sum(hp[n][0] for n in names_h) / len(names_h)
+            gcz = sum(hp[n][1] for n in names_h) / len(names_h)
+            radii = [math.hypot(hp[n][0] - gcx, hp[n][1] - gcz) for n in names_h]
+            mean_r = sum(radii) / len(radii)
+            cov = (sum((r - mean_r) ** 2 for r in radii) / len(radii)) ** 0.5 / (mean_r or 1)
+            if cov < 0.15:
+                err("v4: domy równomiernie wokół centroidu (CoV promienia %.2f < 0.15 "
+                    "— regularny pierścień, nie grona)" % cov)
+
+        # (b) organiczny, nieregularny obrys wyspy (odrzuć elipsę/prostokąt)
+        land = [v for v in tverts if v[1] > 0.05]
+        shore = [v for v in tverts if -0.3 <= v[1] <= 0.3]
+        if len(shore) < 24 or not land:
+            err("v4: za mało punktów linii brzegowej do oceny organiczności obrysu")
+        else:
+            lcx = sum(v[0] for v in land) / len(land)
+            lcz = sum(v[2] for v in land) / len(land)
+            SECT = 24
+            sect_r = [[] for _ in range(SECT)]
+            for v in shore:
+                ang = math.atan2(v[2] - lcz, v[0] - lcx)
+                k = int((ang + math.pi) / (2 * math.pi) * SECT) % SECT
+                sect_r[k].append(math.hypot(v[0] - lcx, v[2] - lcz))
+            rad = [sum(s) / len(s) for s in sect_r if s]
+            if len(rad) < 12:
+                # rzadki brzeg = NIE oceniamy po cichu (luka: scena mogłaby ominąć
+                # test rozrzedzonym samplingiem); wymagamy gęstej linii brzegowej
+                err("v4: obrys oceniony na zbyt rzadkim brzegu (%d sektorów < 12) — "
+                    "zagęść linię brzegową" % len(rad))
+            else:
+                mean_r = sum(rad) / len(rad)
+                cov_r = (sum((r - mean_r) ** 2 for r in rad) / len(rad)) ** 0.5 / (mean_r or 1)
+                diffs = [rad[(i + 1) % len(rad)] - rad[i] for i in range(len(rad))]
+                sign_changes = sum(1 for i in range(len(diffs))
+                                   if diffs[i] * diffs[(i + 1) % len(diffs)] < 0)
+                if cov_r < 0.06:
+                    err("v4: obrys wyspy zbyt regularny (CoV promienia %.3f < 0.06)" % cov_r)
+                if sign_changes < 8:
+                    err("v4: obrys wyspy zbyt gładki (%d ekstremów < 8 — elipsa/prostokąt, "
+                        "nie organiczny brzeg)" % sign_changes)
+
+        # (c) kapliczka i mostek w kadrze głównym render_blender (frustum, nie piksele)
+        center4, radius4, height4 = gc.bounds_metrics([tuple(v) for v in verts])
+        spec = gc.main_spec()
+        for label, grp in (("kapliczka", chapel), ("mostek", bridge)):
+            if not grp:
+                continue
+            gv = verts_of(grp)
+            cpt = (sum(v[0] for v in gv) / len(gv), sum(v[1] for v in gv) / len(gv),
+                   sum(v[2] for v in gv) / len(gv))
+            if not gc.in_frustum(cpt, center4, radius4, height4, spec, margin=1.0):
+                err("v4: %s poza kadrem głównym render_blender (centroid spoza frustum 'main')"
+                    % label)
+            elif not gc.camera_facing(cpt, center4, radius4, height4, spec):
+                err("v4: %s po przeciwnej stronie wyspy niż kamera główna "
+                    "(schowane za masywem w ujęciu 3/4 — przenieś na stronę kamery)" % label)
 
     # budżety sceny
     budget = json.loads(BUDGETS.read_text(encoding="utf-8"))["scene"]

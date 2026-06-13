@@ -77,7 +77,7 @@ def main():
     expect("parts v3 known-bad: mostek bez zwisu", "check_parts.py",
            [FX / "parts_bad_v3"], 1, must_contain="zwisu")
     expect("parts known-bad: wersja poniżej podłogi (LESSON-003)", "check_parts.py",
-           [FX / "parts_bad_floor"], 1, must_contain="podłogi")
+           [FX / "parts_bad_floor", "--floor"], 1, must_contain="podłogi")
 
     print("check_scene (v3):")
     expect("scene v3 known-good -> 0", "check_scene.py",
@@ -88,6 +88,18 @@ def main():
            [FX / "scene_bad_v3.obj", 3], 1, must_contain="plaż")
     expect("scene v3: scena v2 (pas wybrzeża) NIE przechodzi v3", "check_scene.py",
            [FX / "scene_good_v2.obj", 3], 1, must_contain="v3")
+
+    print("check_scene (v4 — wyspa wg referencji):")
+    expect("scene v4 known-good -> 0 (organiczny obrys, grona, kapliczka w kadrze)",
+           "check_scene.py", [FX / "scene_good_v4.obj", 4], 0)
+    expect("scene v4 known-bad: regularny pierścień domów", "check_scene.py",
+           [FX / "scene_bad_v4_ring.obj", 4], 1, must_contain="pierścień")
+    expect("scene v4 known-bad: obrys prostokątny/gładki", "check_scene.py",
+           [FX / "scene_bad_v4_rect.obj", 4], 1, must_contain="organiczny brzeg")
+    expect("scene v4 known-bad: kapliczka poza kadrem głównym", "check_scene.py",
+           [FX / "scene_bad_v4_chapel.obj", 4], 1, must_contain="przeciwnej stronie")
+    expect("scene v4: scena v3 NIE przechodzi v4 (pierścień/elipsa)", "check_scene.py",
+           [FX / "scene_good_v3.obj", 4], 1, must_contain="v4")
 
     print("render_test:")
     with tempfile.TemporaryDirectory() as tmp:

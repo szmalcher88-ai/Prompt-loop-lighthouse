@@ -1,11 +1,11 @@
 {
-  "_comment": "Podloga wersji kontraktu (LESSON-003). Podnosi ja WYLACZNIE konfigurator przy bramie. Checkery egzekwuja: wersja_w_module >= podloga.",
+  "_comment": "Podloga wersji kontraktu (LESSON-003): wersja_w_module >= podloga, egzekwowane PRZED reszta asercji. Ratchet: tylko w gore, podnosi WYLACZNIE konfigurator przy bramie, zgodnie z faktycznie osiagnietym stanem repo. Stan: po milestonie 2 (Forma) -> terrain/house/pier i nowe czesci v3, scena v3. scene -> 4 dopiero PO zadaniu finalnym M2.5.",
   "parts": {
-    "terrain": 2,
+    "terrain": 3,
     "water": 1,
     "lighthouse": 1,
-    "house": 2,
-    "pier": 2,
+    "house": 3,
+    "pier": 3,
     "boat": 2,
     "tree": 2,
     "rocks": 2,
@@ -17,5 +17,5 @@
     "prop_crate": 3,
     "bush": 3
   },
-  "scene": 2
+  "scene": 3
 }

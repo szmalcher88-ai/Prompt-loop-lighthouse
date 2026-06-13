@@ -4,7 +4,7 @@
   "prompt_template": "PROMPT.template.md",
   "state_dir": ".loop",
 
-  "agent_command": "claude -p --permission-mode acceptEdits --allowedTools \"Bash(python:*)\"",
+  "agent_command": "python scripts/agent_wrapper.py claude -p --permission-mode acceptEdits --allowedTools \"Bash(python:*)\"",
 
   "verify_commands": [
     ["python", "-m", "compileall", "-q", "."],

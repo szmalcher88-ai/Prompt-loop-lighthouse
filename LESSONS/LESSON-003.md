@@ -28,8 +28,13 @@ zależał od autodeklaracji wykonawcy (złamanie zasady wykonawca ≠ decydent).
    (ratchet: tylko w górę, razem z faktycznym stanem repo).
 3. Fixture known-bad: część z wersją poniżej podłogi → FAIL
    (scripts/fixtures/parts_bad_floor/ w test_checkers).
-4. Stan podłogi na start M2: zgodny z faktycznym stanem repo po rundzie
-   poprawkowej (terrain/pier/house/boat/tree/rocks/path = 2, water
-   i lighthouse = 1 — te dwie części nigdy nie miały zadań v2; scena = 2).
-   Nowe części M2 (wall, chapel, bridge, prop_barrel, prop_crate, bush)
-   wchodzą z podłogą 3.
+4. Podłoga = faktycznie OSIĄGNIĘTY stan repo (ratchet, tylko w górę),
+   zweryfikowany empirycznie, nie z narracji briefu. Stan po milestonie 2
+   ("Forma"): terrain/house/pier oraz nowe części (wall, chapel, bridge,
+   prop_barrel, prop_crate, bush) = 3; boat/tree/rocks/path = 2;
+   water i lighthouse = 1 (nigdy nie miały zadań v2+); scena = 3.
+   (Brief M2.5 §A1 mówił „2" dla istniejących części/sceny — to wynikało
+   z nieaktualnego obrazu stanu; podłoga niższa niż osiągnięta wersja
+   pozwalałaby na regresję v3→v2, więc trzymamy się stanu faktycznego,
+   spójnie z §A5 „podłoga jeszcze 3" dla sceny w FAZIE A.)
+   scena → 4 dopiero PO finałowym zadaniu M2.5.
