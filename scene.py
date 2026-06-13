@@ -109,8 +109,11 @@ for _k, (_spec, (_x, _z)) in enumerate(zip(_HOUSE_SPECS, _HOUSE_LAYOUT)):
 #            czesci ladowe -> sekcja zatoczki check_scene v3,
 #   boat_2 — cumuje tuz przy pomoscie (< 6 m od jego srodka),
 #   boat_3 — dryfuje na otwartej wodzie po stronie -Z (> 10 m od pomostu).
-# boat_2/boat_3 pokrywaja asercje v2 (styk z pomostem + otwarta woda). Kazda
-# instancja rozni sie wymiarami, kolorem i seedem (zakaz idealnych kopii).
+# boat_2/boat_3 pokrywaja asercje v2 (styk z pomostem + otwarta woda). Lodki
+# plywajace trzymaja sie tafli wg sekcji v5(b) check_scene: dno (min-Y == -depth)
+# w przedziale [-0.30, 0.30] (i nie ponizej -0.40 — nie tona), burty (max-Y ==
+# gunwale_y) > 0.20 nad y=0; stad depth <= 0.30 i gunwale_y > 0.20 dla boat_2/3.
+# Kazda instancja rozni sie wymiarami, kolorem i seedem (zakaz idealnych kopii).
 BOATS = [
     {"x": -3.0, "z": -19.0, "beach": True,
      "params": {"length": 3.0, "beam": 1.2, "depth": 0.24, "gunwale_y": 0.40,
@@ -121,7 +124,7 @@ BOATS = [
                 "hull_color": (0.60, 0.28, 0.18), "seat_color": (0.72, 0.60, 0.40),
                 "seats": 2, "seed": 21}},
     {"x": 22.0, "z": -34.0,
-     "params": {"length": 4.4, "beam": 1.7, "depth": 0.34, "gunwale_y": 0.50,
+     "params": {"length": 4.4, "beam": 1.7, "depth": 0.28, "gunwale_y": 0.50,
                 "hull_color": (0.30, 0.40, 0.52), "seat_color": (0.66, 0.56, 0.42),
                 "seats": 3, "seed": 22}},
 ]
