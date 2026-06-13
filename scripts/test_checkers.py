@@ -19,7 +19,38 @@ ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS = ROOT / "scripts"
 FX = SCRIPTS / "fixtures"
 
+sys.path.insert(0, str(SCRIPTS))
+import geom  # noqa: E402
+
 failures = []
+
+
+def check(label, cond):
+    if cond:
+        print("  PASS  " + label)
+    else:
+        failures.append(label)
+        print("  FAIL  " + label)
+
+
+def test_geom_helpers():
+    print("helpery geom (A2):")
+    a = geom.aabb([(0, 0, 0), (2, 3, 4)])
+    check("aabb -> (xmin..zmax)", a == (0, 2, 0, 3, 0, 4))
+    b = (1, 3, 1, 4, 1, 5)
+    check("penetrates: nachodzące bryły", geom.penetrates(a, b, 0.3))
+    far = (10, 12, 0, 3, 0, 4)
+    check("penetrates: rozłączne -> False", not geom.penetrates(a, far, 0.3))
+    touch = (2, 4, 0, 3, 0, 4)            # styk ścianą (overlap 0 w X)
+    check("penetrates: styk ścianą -> False", not geom.penetrates(a, touch, 0.3))
+    check("distance_xz: rozłączne > 0", geom.distance_xz(a, far) > 7.9)
+    check("distance_xz: nachodzące = 0", geom.distance_xz(a, b) == 0.0)
+    check("rests_on: dno na h w tol", geom.rests_on(a, 0.2, 0.3))
+    check("rests_on: dno poza tol -> False", not geom.rests_on(a, 1.0, 0.3))
+    wide = (0, 10, 0, 1, 0, 2)
+    check("long_axis: dłuższa X", geom.long_axis(wide) == "x")
+    e0, e1 = geom.axis_ends_xz(wide)
+    check("axis_ends_xz: końce wzdłuż X", e0 == (0, 1) and e1 == (10, 1))
 
 
 def run(script, *args):
@@ -39,6 +70,7 @@ def expect(label, script, args, want_rc, must_contain=None):
 
 
 def main():
+    test_geom_helpers()
     print("check_parts (kontrakt v1):")
     expect("parts known-good -> 0", "check_parts.py", [FX / "parts_good"], 0)
     expect("parts known-bad  -> 1", "check_parts.py", [FX / "parts_bad"], 1,
@@ -100,6 +132,22 @@ def main():
            [FX / "scene_bad_v4_chapel.obj", 4], 1, must_contain="przeciwnej stronie")
     expect("scene v4: scena v3 NIE przechodzi v4 (pierścień/elipsa)", "check_scene.py",
            [FX / "scene_good_v3.obj", 4], 1, must_contain="v4")
+
+    print("check_scene (v5 — relacje przestrzenne / styk):")
+    expect("scene v5 known-good -> 0 (schody/łódka/mostek przylegają)",
+           "check_scene.py", [FX / "scene_good_v5.obj", 5], 0)
+    expect("scene v5 known-bad: schody przenikają dom", "check_scene.py",
+           [FX / "scene_bad_v5_stair_pen.obj", 5], 1, must_contain="przenika")
+    expect("scene v5 known-bad: schody nie sięgają górnego poziomu", "check_scene.py",
+           [FX / "scene_bad_v5_stair_short.obj", 5], 1, must_contain="nie sięga górnego")
+    expect("scene v5 known-bad: łódka zatopiona", "check_scene.py",
+           [FX / "scene_bad_v5_boat_sunk.obj", 5], 1, must_contain="tonie")
+    expect("scene v5 known-bad: ścieżka urywa się przed kapliczką", "check_scene.py",
+           [FX / "scene_bad_v5_path_gap.obj", 5], 1, must_contain="nie dochodzi do kapliczki")
+    expect("scene v5 known-bad: przyczółek mostka wisi w powietrzu", "check_scene.py",
+           [FX / "scene_bad_v5_bridge_float.obj", 5], 1, must_contain="wisi nad gruntem")
+    expect("scene v5: scena v4 NIE przechodzi v5 (brak styku)", "check_scene.py",
+           [FX / "scene_good_v4.obj", 5], 1, must_contain="v5")
 
     print("render_test:")
     with tempfile.TemporaryDirectory() as tmp:

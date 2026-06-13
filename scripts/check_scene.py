@@ -29,6 +29,7 @@ BUDGETS = ROOT / "budgets.json"
 
 sys.path.insert(0, str(ROOT / "scripts"))
 import gate_cameras as gc  # noqa: E402  (stdlib-only, wspólne kamery bramy)
+import geom  # noqa: E402  (stdlib-only, helpery AABB — relacje przestrzenne v5)
 
 errors = []
 
@@ -485,6 +486,86 @@ def main():
             elif not gc.camera_facing(cpt, center4, radius4, height4, spec):
                 err("v4: %s po przeciwnej stronie wyspy niż kamera główna "
                     "(schowane za masywem w ujęciu 3/4 — przenieś na stronę kamery)" % label)
+
+    # ----- relacje przestrzenne v5 (SCENE_VERSION >= 5): STYK między częściami
+    # (LESSON-004). Progi liczbowe, nie "blisko"; helpery: scripts/geom.py. -----
+    if version >= 5:
+        def gbox(group_map):
+            return geom.aabb(verts_of(group_map))
+
+        house_boxes = {n: gbox({n: g}) for n, g in houses.items()}
+        stair_groups = {**members("stair"), **members("wall")}
+
+        # (a) schody/mur: zakaz przenikania AABB budynków (kolizja
+        # dom-infrastruktura — dotąd liczyliśmy tylko dom-dom). tol 0.3 m:
+        # poniżej stopnia, powyżej szumu/lekkiego dotknięcia ścianą.
+        PEN_TOL = 0.3
+        for sn, sg in sorted(stair_groups.items()):
+            sb = gbox({sn: sg})
+            for hn, hb in house_boxes.items():
+                if geom.penetrates(sb, hb, PEN_TOL):
+                    ox, oy, oz = geom.overlap_extents(sb, hb)
+                    err("v5: %s przenika bryłę %s (nachodzenie %.1f×%.1f×%.1f m > %.1f) "
+                        "— schody/mur mają przylegać, nie wchodzić w dom"
+                        % (sn, hn, ox, oy, oz, PEN_TOL))
+
+        # (a) schody łączą DWA poziomy: dół spoczywa na terenie przy dolnym
+        # końcu, góra sięga terenu przy górnym końcu (tol 0.7 m). Łapie schody
+        # urywające się w powietrzu/trawie.
+        STAIR_TOL = 0.7
+        for sn, sg in sorted(members("stair").items()):
+            sb = gbox({sn: sg})
+            (lx, lz), (hx, hz) = geom.axis_ends_xz(sb)
+            t_lo = nearest_terrain_y(lx, lz)
+            t_hi = nearest_terrain_y(hx, hz)
+            low_g, high_g = min(t_lo, t_hi), max(t_lo, t_hi)
+            if abs(sb[2] - low_g) > STAIR_TOL:
+                err("v5: %s nie styka się z dolnym poziomem (dno %.1f vs teren %.1f, tol %.1f)"
+                    % (sn, sb[2], low_g, STAIR_TOL))
+            if abs(sb[3] - high_g) > STAIR_TOL:
+                err("v5: %s nie sięga górnego poziomu (szczyt %.1f vs teren %.1f, tol %.1f) "
+                    "— urywa się w powietrzu/trawie" % (sn, sb[3], high_g, STAIR_TOL))
+
+        # (b) łódka: wariant po pozycji XZ. Pływająca — dno ≈ y=0, burty nad
+        # taflą, nie zatopiona głębiej niż próg. Plażowa — spoczywa na piasku.
+        for bn, bg in sorted(boats.items()):
+            bb = gbox({bn: bg})
+            cx = (bb[0] + bb[1]) / 2
+            cz = (bb[4] + bb[5]) / 2
+            ground = nearest_terrain_y(cx, cz)
+            if ground > 0.05:  # nad lądem -> wariant plażowy
+                if not geom.rests_on(bb, ground, 0.4):
+                    err("v5: %s na plaży nie spoczywa na piasku (dno %.2f vs teren %.2f, tol 0.4)"
+                        % (bn, bb[2], ground))
+            else:              # nad wodą -> wariant pływający
+                if bb[2] < -0.40:
+                    err("v5: %s zatopiona — dno %.2f poniżej -0.40 (kadłub tonie)" % (bn, bb[2]))
+                if abs(bb[2]) > 0.30:
+                    err("v5: %s — dno kadłuba %.2f za daleko od tafli y=0 (tol 0.30)" % (bn, bb[2]))
+                if bb[3] <= 0.20:
+                    err("v5: %s — burty (%.2f) nie wystają nad taflę y=0 (wtopiona w wodę)"
+                        % (bn, bb[3]))
+
+        # (c) mostek/ścieżka do kapliczki: oba końce stykają się z gruntem
+        # (przyczółki nie wiszą w powietrzu), a koniec od strony turni dochodzi
+        # do kapliczki (AABB przylega, nie urywa się przed nią).
+        connector = members("bridge") or members("path")
+        if connector and chapel:
+            cb = gbox(connector)
+            chb = gbox(chapel)
+            (lx, lz), (hx, hz) = geom.axis_ends_xz(cb)
+            for (ex, ez) in ((lx, lz), (hx, hz)):
+                tg = nearest_terrain_y(ex, ez)
+                # przy końcu próbkujemy najniższy wierzchołek connectora w tym rejonie
+                end_min = min((verts[i][1] for g in connector.values() for i in g["verts"]
+                               if abs(verts[i][0] - ex) < 2.0 and abs(verts[i][2] - ez) < 2.0),
+                              default=cb[2])
+                if end_min - tg > 1.2:
+                    err("v5: przyczółek mostka/ścieżki przy (%.0f,%.0f) wisi nad gruntem "
+                        "(%.1f m nad terenem %.1f, tol 1.2)" % (ex, ez, end_min - tg, tg))
+            if geom.distance_xz(cb, chb) > 2.0:
+                err("v5: mostek/ścieżka nie dochodzi do kapliczki (odstęp AABB %.1f m > 2.0 "
+                    "— urywa się przed progiem)" % geom.distance_xz(cb, chb))
 
     # budżety sceny
     budget = json.loads(BUDGETS.read_text(encoding="utf-8"))["scene"]
