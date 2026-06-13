@@ -140,6 +140,9 @@ def main():
            [FX / "lighthouse_bad_notaper.obj"], 1, must_contain="zwęża się ku górze")
     expect("lighthouse known-bad: za niska", "check_lighthouse.py",
            [FX / "lighthouse_bad_short.obj"], 1, must_contain="wysokość")
+    expect("lighthouse known-bad: wieża jednolita (brak pasów — dług M3)",
+           "check_lighthouse.py", [FX / "lighthouse_bad_uniform.obj"], 1,
+           must_contain="naprzemiennych poziomych pasów")
 
     print("check_scene (v5 — relacje przestrzenne / styk):")
     expect("scene v5 known-good -> 0 (schody/łódka/mostek przylegają)",

@@ -72,6 +72,46 @@ def _subsurf(obj, levels=1):
     m.render_levels = levels
 
 
+def _bpy_tower(white, red, taper, s):
+    """Wieża jako stos pierścieni (Blender Z-up): pasy = naprzemienny materiał
+    co 2 pierścienie -> realne poziome pasy biel/czerwień (po subsurf gładkie)."""
+    z0, z1 = 2.0 * s, 18.0 * s
+    r0, r1 = 2.4, (1.4 if taper else 2.4)
+    rings, seg = 12, 32
+    verts, faces, fmat = [], [], []
+    for k in range(rings + 1):
+        t = k / rings
+        r, z = r0 + (r1 - r0) * t, z0 + (z1 - z0) * t
+        verts += [(r * math.cos(2 * math.pi * j / seg),
+                   r * math.sin(2 * math.pi * j / seg), z) for j in range(seg)]
+    for k in range(rings):
+        m = (k // 2) % 2                       # 2 pierścienie na pas
+        lo, hi = k * seg, (k + 1) * seg
+        for j in range(seg):
+            j2 = (j + 1) % seg
+            faces.append((lo + j, lo + j2, hi + j2, hi + j))
+            fmat.append(m)
+    cb = len(verts); verts.append((0.0, 0.0, z0))
+    ct = len(verts); verts.append((0.0, 0.0, z1))
+    top = rings * seg
+    for j in range(seg):
+        j2 = (j + 1) % seg
+        faces.append((cb, j2, j)); fmat.append(0)
+        faces.append((ct, top + j, top + j2)); fmat.append((rings - 1) // 2 % 2)
+    mesh = bpy.data.meshes.new("tower")
+    mesh.from_pydata(verts, [], faces)
+    mesh.update()
+    obj = bpy.data.objects.new("tower", mesh)
+    bpy.context.collection.objects.link(obj)
+    obj.data.materials.append(white)
+    obj.data.materials.append(red)
+    for i, poly in enumerate(obj.data.polygons):
+        poly.material_index = fmat[i]
+    _bevel(obj, width=0.05)
+    _subsurf(obj, 1)
+    return obj
+
+
 def _build_bpy(taper, s):
     stone = _mat("stone", _STONE)
     white = _mat("stripe_white", _WHITE)
@@ -87,20 +127,10 @@ def _build_bpy(taper, s):
     _bevel(base, width=0.12)
     _subsurf(base, 1)
 
-    # --- tower: zwężający się stożek w pasy (biel/czerwień naprzemiennie) ---
-    r_bottom, r_top = 2.4, (1.4 if taper else 2.4)
-    t_depth = 16.0 * s
-    bpy.ops.mesh.primitive_cone_add(vertices=32, radius1=r_bottom, radius2=r_top,
-                                    depth=t_depth, location=(0, 0, 10.0 * s))
-    tower = _rename("tower")
-    tower.data.materials.append(white)
-    tower.data.materials.append(red)
-    stripe_h = t_depth / 6.0
-    for poly in tower.data.polygons:
-        band = int((poly.center.z + t_depth / 2) / stripe_h)
-        poly.material_index = band % 2
-    _bevel(tower, width=0.05)
-    _subsurf(tower, 1)
+    # --- tower: zwężający się walec w POZIOME PASY biel/czerwień ---
+    # Pierścienie (loop cuts w pionie) zamiast jednej ścianki na całą wysokość —
+    # inaczej banding po wysokości środka ścianki daje jednolitą wieżę (dług M3).
+    tower = _bpy_tower(white, red, taper, s)
 
     # --- gallery: szersza galeryjka pod laterną ---
     bpy.ops.mesh.primitive_cylinder_add(vertices=28, radius=2.0, depth=0.6 * s,

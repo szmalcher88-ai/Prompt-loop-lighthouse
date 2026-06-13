@@ -71,8 +71,10 @@ def validate_obj(obj_path):
     verts = []
     groups = {}
     current = None
+    current_mtl = None
     mtllib = None
     usemtl_all = set()
+    tower_faces = []          # (center_y, material) — do asercji pasów
     for raw in obj_path.read_text(encoding="utf-8").splitlines():
         parts = raw.split()
         if not parts:
@@ -86,10 +88,10 @@ def validate_obj(obj_path):
         elif tag == "mtllib":
             mtllib = parts[1] if len(parts) > 1 else ""
         elif tag == "usemtl":
-            m = parts[1] if len(parts) > 1 else ""
-            usemtl_all.add(m)
+            current_mtl = parts[1] if len(parts) > 1 else ""
+            usemtl_all.add(current_mtl)
             if current is not None:
-                groups[current]["usemtl"].add(m)
+                groups[current]["usemtl"].add(current_mtl)
         elif tag == "f":
             idxs = []
             for tok in parts[1:]:
@@ -104,6 +106,9 @@ def validate_obj(obj_path):
                 else:
                     groups[current]["faces"] += 1
                     groups[current]["verts"].update(idxs)
+                    if current == "tower":
+                        cy = sum(verts[i][1] for i in idxs) / len(idxs)
+                        tower_faces.append((cy, current_mtl))
             else:
                 err("face wskazuje nieistniejący wierzchołek: %r" % raw)
 
@@ -169,6 +174,29 @@ def validate_obj(obj_path):
         if len(groups["tower"]["usemtl"]) < 2:
             err("tower powinna używać >=2 materiałów (pasy), ma %d"
                 % len(groups["tower"]["usemtl"]))
+        # Asercja PASÓW (spłata długu M3: '>=2 materiały' przechodziło trywialnie
+        # czapkami vs boki, bez realnych poziomych pasów). Binujemy ścianki wieży
+        # po wysokości, bierzemy dominujący materiał per bin i liczymy naprzemienne
+        # zmiany między biel/czerwień. Jednolita wieża => 0 zmian => FAIL.
+        stripe_mats = {m for m in usemtl_all if "white" in m or "red" in m or "stripe" in m}
+        band_faces = [(cy, m) for cy, m in tower_faces if m in stripe_mats]
+        if len(band_faces) < 12:
+            err("za mało ścianek pasowych na wieży (%d) — brak materiałów pasów?"
+                % len(band_faces))
+        else:
+            ys = [cy for cy, _ in band_faces]
+            y_lo, y_hi = min(ys), max(ys)
+            nbins = 12
+            bins = [{} for _ in range(nbins)]
+            for cy, m in band_faces:
+                b = min(nbins - 1, int((cy - y_lo) / max(y_hi - y_lo, 1e-9) * nbins))
+                bins[b][m] = bins[b].get(m, 0) + 1
+            dom = [max(b, key=b.get) for b in bins if b]
+            alternations = sum(1 for a, c in zip(dom, dom[1:]) if a != c)
+            if alternations < 4:
+                err("wieża nie ma naprzemiennych poziomych pasów biel/czerwień "
+                    "(%d zmian materiału po wysokości < 4 — wieża niemal jednolita)"
+                    % alternations)
         mtl_text = mtl_path.read_text(encoding="utf-8")
         newmtls = {l.split()[1] for l in mtl_text.splitlines()
                    if l.startswith("newmtl") and len(l.split()) > 1}

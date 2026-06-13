@@ -67,7 +67,27 @@ def main():
     # --- bad_short: spłaszcz całość (wysokość < 4 m) ---
     v2 = [[v[0], v[1] * 0.12, v[2]] for v in verts]
     write(FX / "lighthouse_bad_short.obj", lines, v2)
-    print("fixtures bad: notaper + short")
+
+    # --- bad_uniform: wieża jednolita (wszystkie pasy -> jeden materiał) ---
+    # zachowuje MTL (by dojść do asercji pasów); kolaps usemtl w bloku `o tower`.
+    mtl_src = GOOD.with_suffix(".mtl")
+    uobj = FX / "lighthouse_bad_uniform.obj"
+    (FX / "lighthouse_bad_uniform.mtl").write_text(mtl_src.read_text(encoding="utf-8"),
+                                                   encoding="utf-8")
+    cur = None
+    out = []
+    for raw in lines:
+        p = raw.split()
+        if p and p[0] in ("o", "g"):
+            cur = p[1] if len(p) > 1 else ""
+        if raw.startswith("mtllib"):
+            out.append("mtllib lighthouse_bad_uniform.mtl")
+        elif cur == "tower" and raw.startswith("usemtl"):
+            out.append("usemtl stripe_white")        # cała wieża jednym materiałem
+        else:
+            out.append(raw)
+    uobj.write_text("\n".join(out) + "\n", encoding="utf-8")
+    print("fixtures bad: notaper + short + uniform")
 
 
 if __name__ == "__main__":
