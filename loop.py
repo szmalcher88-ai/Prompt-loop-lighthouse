@@ -227,9 +227,13 @@ def render_feedback(fails, attempt: int) -> str:
 # ----------------------------------------------------------------------------
 
 def escalate(cfg, cwd, state_dir: Path, log: JsonlLog, task: str, reason: str,
-             detail: str, attempt: int, esc_counter: int) -> Path:
+             detail: str, attempt: int) -> Path:
     """Odstaw pracę agenta na stash (nic nie ginie), oznacz zadanie [!],
     zapisz raport dla człowieka."""
+    # Numer raportu wyprowadzony z liczby istniejących plików ESKALACJA-*.md
+    # w state_dir, nie z licznika w pamięci procesu: licznik zerował się przy
+    # restarcie pętli i nadpisywał ESKALACJA-001.md, niszcząc dowody (ROZBIEZNOSCI.md).
+    seq = len(list(state_dir.glob("ESKALACJA-*.md"))) + 1
     stash_ref = None
     if not git_is_clean(cwd):
         git(["stash", "push", "-u", "-m", f"loop-eskalacja: {task[:60]}"], cwd)
@@ -241,9 +245,9 @@ def escalate(cfg, cwd, state_dir: Path, log: JsonlLog, task: str, reason: str,
     git(["add", cfg["plan_file"]], cwd)
     git(["commit", "-m", f"loop: eskalacja — {task[:60]}"], cwd)
 
-    report = state_dir / f"ESKALACJA-{esc_counter:03d}.md"
+    report = state_dir / f"ESKALACJA-{seq:03d}.md"
     report.write_text(
-        f"# Eskalacja {esc_counter:03d}\n\n"
+        f"# Eskalacja {seq:03d}\n\n"
         f"- **Czas:** {now_iso()}\n"
         f"- **Zadanie:** {task}\n"
         f"- **Powód:** {reason}\n"
@@ -361,7 +365,6 @@ def main() -> int:
 
     t0 = time.monotonic()
     iterations = 0
-    esc_counter = 0
 
     while True:
         if iterations >= cfg["max_iterations"]:
@@ -406,20 +409,18 @@ def main() -> int:
                        for p in protected)
             ]
             if touched_protected:
-                esc_counter += 1
                 escalate(cfg, cwd, state_dir, log, task, "chroniona-sciezka",
                          "Agent zmienił ścieżki wymagające ludzkiej recenzji "
                          f"(guard anty-reward-hacking): {touched_protected}",
-                         attempt, esc_counter)
+                         attempt)
                 escalated = True
                 break
 
             # guard: scope creep
             if lines > cfg["max_diff_lines"]:
-                esc_counter += 1
                 escalate(cfg, cwd, state_dir, log, task, "scope",
                          f"Diff ma {lines} linii (limit {cfg['max_diff_lines']}). "
-                         f"Zmienione pliki: {files}", attempt, esc_counter)
+                         f"Zmienione pliki: {files}", attempt)
                 escalated = True
                 break
 
@@ -450,22 +451,19 @@ def main() -> int:
             print(f"  XX czerwono: `{fails[0]['cmd']}` rc={fails[0]['rc']} (sig {sig})")
 
             if sig in seen_sigs:
-                esc_counter += 1
                 escalate(cfg, cwd, state_dir, log, task, "brak-postepu",
                          "Identyczna sygnatura porażki w kolejnych próbach — "
                          "agent kręci się w miejscu.\n\n" + render_feedback(fails, attempt),
-                         attempt, esc_counter)
+                         attempt)
                 escalated = True
                 break
             seen_sigs.add(sig)
             feedback = render_feedback(fails, attempt)
         else:
             # wyczerpane próby (pętla for nie przerwana breakiem)
-            esc_counter += 1
             escalate(cfg, cwd, state_dir, log, task, "wyczerpane-proby",
                      f"Zadanie nie zzieleniało w {cfg['max_retries_per_task']} próbach.\n\n"
-                     + (feedback or "(brak feedbacku)"), cfg["max_retries_per_task"],
-                     esc_counter)
+                     + (feedback or "(brak feedbacku)"), cfg["max_retries_per_task"])
             escalated = True
 
         if escalated and cfg["on_escalation"] == "stop":

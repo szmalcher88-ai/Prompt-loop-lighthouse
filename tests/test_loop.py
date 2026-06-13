@@ -258,3 +258,30 @@ def test_escalation_report_contains_stash_ref_and_attempt(tmp_path):
     assert "**Proba nr:** 2" in report.replace("ó", "o")  # eskalacja w 2. probie
     # referencja z raportu istnieje naprawde
     assert "stash@{0}" in env.stash_list() or env.stash_list().startswith("stash@{0}")
+
+
+# ---------------------------------------------------------------------------
+# (d) numer raportu eskalacji przezywa restart procesu (regresja: licznik
+#     w pamieci zerowal sie i nadpisywal ESKALACJA-001.md, niszczac dowody)
+# ---------------------------------------------------------------------------
+
+def test_escalation_numbering_survives_loop_restart(tmp_path):
+    # dwa zadania; kazdy bieg eskaluje pierwsze otwarte i zatrzymuje sie
+    # (on_escalation=stop). Drugi bieg to nowy proces -> licznik w pamieci
+    # ruszylby od zera i nadpisal 001; numer z liczby plikow w state_dir nie.
+    env = LoopEnv(tmp_path, ["bad", "bad"], VERIFY_NO_BAD)
+
+    rc1, out1, err1 = env.run_loop()
+    assert rc1 == 5, f"bieg 1 stdout:\n{out1}\nstderr:\n{err1}"
+    assert [r.name for r in env.escalation_reports()] == ["ESKALACJA-001.md"]
+
+    # bieg 2: swiezy proces, drzewo czyste (praca biegu 1 na stashu),
+    # baseline zielony; pierwsze otwarte zadanie to drugie "bad"
+    rc2, out2, err2 = env.run_loop()
+    assert rc2 == 5, f"bieg 2 stdout:\n{out2}\nstderr:\n{err2}"
+
+    names = [r.name for r in env.escalation_reports()]
+    assert names == ["ESKALACJA-001.md", "ESKALACJA-002.md"], names
+    # raport 001 nie zostal nadpisany przez bieg 2 (numer w tytule zgodny)
+    assert "# Eskalacja 001" in env.escalation_reports()[0].read_text(encoding="utf-8")
+    assert "# Eskalacja 002" in env.escalation_reports()[1].read_text(encoding="utf-8")
