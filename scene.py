@@ -275,17 +275,20 @@ STAIRS = [
 # y~7 m (>= 3 m pod kapliczka), rozlaczne z masywem zabudowy przez przelecz
 # (siodlo terenu ~2.5 m, >= 1.5 m nizej niz konce) i odlegle >= 6 m od
 # najblizszego domu z pierscienia (house_1 przy phi=0, x~18). Mostek linowy
-# biegnie wzdluz +X (srodek w x=22): jego turniowy koniec (x~25) jest <= 5 m od
-# kapliczki (obrys turni od x~28.5), a wioskowy koniec (x~19) <= 6 m od house_1.
-# Mostek unosimy o lift ponad teren, by zwisajace liny nie zapadaly sie w grunt.
+# biegnie wzdluz +X (srodek w x=23.5, przeslo 9 m -> x 19..28): jego turniowy
+# koniec (x~28) DOCHODZI do kapliczki (obrys turni od x~28.5, odstep AABB
+# <= 2.0 m — sekcja v5(c)), a wioskowy koniec (x~19) <= 6 m od house_1. Mostek
+# SLEDZI TEREN per-wierzcholkowo (drape: kazdy wierzcholek na wysokosci terenu
+# pod nim + lift), wiec OBA przyczolki przylegaja do gruntu, gdy teren miedzy
+# turnia a wioska opada tarasami (5.5 -> 2.5 -> turnia), zamiast wisiec/tonac.
 CHAPEL = {
     "x": 30.0, "z": -6.0,
     "params": {"seed": 81, "wall_color": (0.88, 0.85, 0.78),
                "roof_color": (0.42, 0.20, 0.15), "cross_color": (0.28, 0.24, 0.20)},
 }
 BRIDGE = {
-    "x": 22.0, "z": -5.0, "rot": 0.0, "lift": 0.7,
-    "params": {"span": 6.0, "half_spread": 0.6, "sag": 0.6, "seed": 91},
+    "x": 23.5, "z": -5.0, "rot": 0.0, "lift": 0.7,
+    "params": {"span": 9.0, "half_spread": 0.6, "sag": 0.6, "seed": 91},
 }
 
 
@@ -547,16 +550,22 @@ def assemble():
     _translate([chapel], 0.0, _nearest_terrain_y(tverts, cx, cz), 0.0)
     scene.append(chapel)
 
-    # --- mostek linowy: od turni kapliczki ku zabudowie wioski, uniesiony nad
-    # teren o lift, by liny ze zwisem nie zapadaly sie w grunt. Grupa bridge_1. ---
+    # --- mostek linowy: od turni kapliczki ku zabudowie wioski. SLEDZI TEREN
+    # per-wierzcholkowo (wzorzec drape w scripts/fixtures/gen_scene_v5.py):
+    # po ustawieniu w XZ kazdy wierzcholek dostaje Y = lokalne Y (luk zwisu,
+    # konce ~0) + wysokosc terenu pod nim + lift. Dzieki temu OBA przyczolki
+    # przylegaja do gruntu (najnizszy wierzcholek przy koncu ~ lift nad terenem,
+    # << 1.2 m), gdy teren miedzy turnia a wioska opada tarasami — zamiast
+    # wisiec w powietrzu albo tonac przy jednolitym posadowieniu (sekcja v5(c)).
+    # Grupa bridge_1. ---
     bridge_mod = _load_part("bridge")
     groups = bridge_mod.build(**BRIDGE["params"])
     _namespace_materials(groups, "bridge_1")
     bridge = _merge(groups, "bridge_1")
     _rotate_y([bridge], BRIDGE["rot"])
     _translate([bridge], BRIDGE["x"], 0.0, BRIDGE["z"])
-    cx, cz = _centroid_xz(bridge)
-    _translate([bridge], 0.0, _nearest_terrain_y(tverts, cx, cz) + BRIDGE["lift"], 0.0)
+    bridge["vertices"] = [(x, y + _nearest_terrain_y(tverts, x, z) + BRIDGE["lift"], z)
+                          for (x, y, z) in bridge["vertices"]]
     scene.append(bridge)
 
     return scene
@@ -624,4 +633,4 @@ def main():
 if __name__ == "__main__":
     main()
 
-SCENE_VERSION = 4
+SCENE_VERSION = 5
