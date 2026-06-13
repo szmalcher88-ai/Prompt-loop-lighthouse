@@ -242,20 +242,29 @@ PATH_ROUTE = [
     (0.0, 0.0),      # rejon latarni (plateau, os 0, 0)
 ]
 
-# Mur oporowy i schody (czesc parts/wall.py). Tarasy wyspy opadaja od plateau
-# latarni (r=0) ku linii brzegowej; kamienne mury podtrzymuja krawedz tarasu
-# miedzy pierscieniem domow (r=0.52) a tarasem dolnym (r=0.65), a schody lacza
-# te poziomy. Segmenty stoja w lukach miedzy domami (phi domow: 20/59/98/137/
-# 176/215), kazdy obrocony stycznie do krawedzi (phi+90) i posadowiony na
-# terenie jak pozostale czesci. Grupy wall_1, wall_2 (mur) oraz stair_1 (bieg).
-_WALL_R = 0.585
+# Mur oporowy i schody (czesc parts/wall.py). Teren wyspy to tarasy (plateau
+# latarni y=9, pierscien zabudowy y=5.5, taras dolny y=2.5, ...). Kamienne mury
+# i schody stoja w LUKACH MIEDZY GRONAMI domow — tak, by ZADNA bryla stair*/
+# wall* nie przenikala AABB domu (sekcja v5(a) check_scene: przenikanie na 3
+# osiach > 0.3 m to kolizja dom-infrastruktura). Pozycje sa jawne (x, z) zamiast
+# po elipsie, bo grona zabudowy nie leza juz na regularnym pierscieniu.
+#
+# Mury (wall_1, wall_2) biegna stycznie do krawedzi tarasu (rot wokol Y),
+# posadowione podstawa na terenie. Schody (stair_1) lacza DWA tarasy: bieg
+# przecina krawedz tarasu (5.5 -> 2.5) przy x=9, z~18.5; jego wysokosc rowna
+# przyrostowi terenu miedzy koncami footprintu, dno spoczywa na dolnym tarasie,
+# a szczyt siega gornego (sekcja v5(a): styk z dwoma poziomami, tol 0.7 m).
 WALLS = [
-    {"phi": 78.0, "params": {"length": 9.0, "height": 1.6, "thickness": 0.6, "seed": 71}},
-    {"phi": 157.0, "params": {"length": 8.0, "height": 1.8, "thickness": 0.6, "seed": 72}},
+    {"x": 15.0, "z": 18.5, "rot": 0.0,
+     "params": {"length": 8.0, "height": 1.6, "thickness": 0.6, "seed": 71}},
+    {"x": 8.0, "z": 7.0, "rot": 0.0,
+     "params": {"length": 6.0, "height": 1.8, "thickness": 0.6, "seed": 72}},
 ]
+# edge_z: wspolrzedna Z krawedzi tarasu, ktora bieg ma przeciac (footprint
+# rozciaga sie symetrycznie po obu jej stronach, na dwa rozne poziomy terenu).
 STAIRS = [
-    {"phi": 117.0, "params": {"n_steps": 8, "step_rise": 0.22, "step_run": 0.4,
-                              "step_width": 1.8, "seed": 73}},
+    {"x": 9.0, "edge_z": 18.5,
+     "params": {"n_steps": 8, "step_run": 0.42, "step_width": 1.8, "seed": 73}},
 ]
 
 # Kapliczka i mostek (czesci parts/chapel.py, parts/bridge.py). Kapliczka stoi na
@@ -485,35 +494,42 @@ def assemble():
                          for (x, y, z) in g["vertices"]]
     scene.extend(path)
 
-    # --- mury oporowe: segmenty wzdluz krawedzi tarasu, posadowione na terenie.
-    # Czesc wall.py zwraca mur i schody; tu bierzemy sam mur (include_stairs=
-    # False), obracamy stycznie do krawedzi (phi+90) i osadzamy podstawe (y=0)
-    # na wysokosci najblizszego wierzcholka terenu. Grupy wall_1, wall_2. ---
+    # --- mury oporowe: segmenty wzdluz krawedzi tarasu w lukach miedzy gronami
+    # domow, obrocone stycznie (rot wokol Y) i osadzone podstawa (y=0) na
+    # wysokosci najblizszego wierzcholka terenu. Pozycje (x, z) dobrane tak, by
+    # AABB muru nie przenikalo zadnego domu (v5(a)). Grupy wall_1, wall_2. ---
     wall_mod = _load_part("wall")
     for i, spec in enumerate(WALLS, start=1):
         prefix = "wall_%d" % i
         groups = wall_mod.build(include_stairs=False, **spec["params"])
         _namespace_materials(groups, prefix)
         seg = _merge(groups, prefix)
-        x, z = _ell(_WALL_R, spec["phi"])
-        _rotate_y([seg], spec["phi"] + 90.0)
-        _translate([seg], x, 0.0, z)
+        _rotate_y([seg], spec["rot"])
+        _translate([seg], spec["x"], 0.0, spec["z"])
         cx, cz = _centroid_xz(seg)
         _translate([seg], 0.0, _nearest_terrain_y(tverts, cx, cz), 0.0)
         scene.append(seg)
 
-    # --- schody: bieg laczacy poziomy tarasow (include_wall=False), obrocony
-    # stycznie i posadowiony na terenie jak mury. Grupa stair_1. ---
+    # --- schody: bieg laczacy DWA tarasy (include_wall=False). Czesc buduje
+    # stopnie wzdluz +Z (szczyt przy duzym z); odbijamy je o 180 wokol Y, by
+    # szczyt wypadl po stronie GORNEGO tarasu (mniejsze z), a footprint przecial
+    # krawedz edge_z symetrycznie. Wysokosc biegu = przyrost terenu miedzy
+    # koncami (step_rise = delta/n_steps), dno osadzone na dolnym tarasie ->
+    # szczyt siega gornego (v5(a): styk z dwoma poziomami). Grupa stair_1. ---
     for i, spec in enumerate(STAIRS, start=1):
         prefix = "stair_%d" % i
-        groups = wall_mod.build(include_wall=False, **spec["params"])
+        n = int(spec["params"]["n_steps"])
+        run = float(spec["params"]["step_run"])
+        sx, edge_z = spec["x"], spec["edge_z"]
+        half = n * run / 2.0
+        g_high = _nearest_terrain_y(tverts, sx, edge_z - half)  # gorny taras (male z)
+        g_low = _nearest_terrain_y(tverts, sx, edge_z + half)   # dolny taras (duze z)
+        rise = max(1.0, g_high - g_low)
+        groups = wall_mod.build(include_wall=False, step_rise=rise / n, **spec["params"])
         _namespace_materials(groups, prefix)
         seg = _merge(groups, prefix)
-        x, z = _ell(_WALL_R, spec["phi"])
-        _rotate_y([seg], spec["phi"] + 90.0)
-        _translate([seg], x, 0.0, z)
-        cx, cz = _centroid_xz(seg)
-        _translate([seg], 0.0, _nearest_terrain_y(tverts, cx, cz), 0.0)
+        _rotate_y([seg], 180.0)                  # szczyt (lokalne +Z) -> male z
+        _translate([seg], sx, g_low, edge_z + half)
         scene.append(seg)
 
     # --- kapliczka: na turni (wyniesione plateau) z dala od zabudowy,
