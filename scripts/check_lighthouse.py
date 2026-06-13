@@ -1,28 +1,36 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Niezależny weryfikator modelu 3D latarni morskiej (sygnał prawdy pętli).
+"""Weryfikator latarni — PRZEPIĘTY na bpy (M3-migracja).
 
-Kontrakt:
-  * Jeśli lighthouse.py nie istnieje -> exit 0 (zielony baseline przed startem).
-  * Jeśli istnieje: `python lighthouse.py` musi zapisać out/lighthouse.obj
-    (Y-up, jednostki ~metry) z grupami `o`: base, tower, gallery, lantern,
-    roof, door i przejść wszystkie asercje geometryczne poniżej.
-  * Sekcja materiałów: jeśli generator tworzy out/lighthouse.mtl, OBJ musi
-    go podpinać (mtllib), używać >=3 materiałów (usemtl), a grupa tower
-    >=2 naprzemiennych materiałów (pasy latarni).
+Tryby:
+  * brak parts/lighthouse_bpy.py            -> exit 0 (zielony baseline).
+  * python check_lighthouse.py <obj>        -> waliduj wskazany OBJ (fixtury),
+                                               bez budowania, bez determinizmu.
+  * python check_lighthouse.py (bez args)   -> zbuduj latarnię w bpy
+      (blender --background --python scripts/bpy_build.py), eksport do
+      out/lighthouse.obj Z ZAAPLIKOWANYMI modyfikatorami, TEST DETERMINIZMU
+      (dwa eksporty = identyczny OBJ — bramka wyjścia M3) + asercje geometryczne.
+
+Asercje formy zachowane z czasów ręcznego OBJ (proporcje, części, zwężanie,
+materiały) — bevel/subdivision zmieniają LICZBĘ wierzchołków, nie kształt;
+progi liczbowe pozostają sensowne (subsurf tylko dodaje geometrię).
 
 Ten plik jest chroniony (protected_paths) — agent ma go czytać, nie zmieniać.
 """
 
+import glob
+import hashlib
 import math
+import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-GENERATOR = ROOT / "lighthouse.py"
+BUILDER = ROOT / "parts" / "lighthouse_bpy.py"
+BPY_BUILD = ROOT / "scripts" / "bpy_build.py"
 OBJ = ROOT / "out" / "lighthouse.obj"
-MTL = ROOT / "out" / "lighthouse.mtl"
 
 REQUIRED_GROUPS = ["base", "tower", "gallery", "lantern", "roof", "door"]
 
@@ -33,36 +41,39 @@ def err(msg):
     errors.append(msg)
 
 
-def main():
-    if not GENERATOR.exists():
-        print("OK: lighthouse.py jeszcze nie istnieje (zielony baseline).")
-        return 0
+def locate_blender():
+    env = os.environ.get("BLENDER_BIN")
+    if env and Path(env).exists():
+        return env
+    on_path = shutil.which("blender")
+    if on_path:
+        return on_path
+    for pat in (r"C:\Program Files\Blender Foundation\*\blender.exe",
+                r"C:\Program Files (x86)\Blender Foundation\*\blender.exe"):
+        hits = sorted(glob.glob(pat))
+        if hits:
+            return hits[-1]
+    return None
 
-    if OBJ.exists():
-        OBJ.unlink()
-    if MTL.exists():
-        MTL.unlink()
 
-    proc = subprocess.run(
-        [sys.executable, str(GENERATOR)], cwd=str(ROOT),
-        capture_output=True, text=True, timeout=60,
-    )
-    if proc.returncode != 0:
-        print("FAIL: `python lighthouse.py` zakończył się kodem %d\n%s%s"
-              % (proc.returncode, proc.stdout, proc.stderr))
-        return 1
-    if not OBJ.exists():
-        print("FAIL: generator nie utworzył out/lighthouse.obj")
-        return 1
+def run_build(blender, out_obj):
+    p = subprocess.run([blender, "--background", "--python", str(BPY_BUILD), "--",
+                        str(BUILDER), str(out_obj)],
+                       capture_output=True, text=True, timeout=300)
+    out = (p.stdout or "") + (p.stderr or "")
+    ok = any(line.startswith("OK:") for line in out.splitlines())
+    return ok, out
 
-    verts = []            # lista (x, y, z)
-    groups = {}           # nazwa -> {"faces": int, "verts": set(idx), "usemtl": set()}
+
+def validate_obj(obj_path):
+    """Asercje geometryczne (+ materiały, gdy obok jest .mtl). Zwraca exit code."""
+    mtl_path = obj_path.with_suffix(".mtl")
+    verts = []
+    groups = {}
     current = None
-    current_mtl = None
     mtllib = None
     usemtl_all = set()
-
-    for raw in OBJ.read_text(encoding="utf-8").splitlines():
+    for raw in obj_path.read_text(encoding="utf-8").splitlines():
         parts = raw.split()
         if not parts:
             continue
@@ -75,10 +86,10 @@ def main():
         elif tag == "mtllib":
             mtllib = parts[1] if len(parts) > 1 else ""
         elif tag == "usemtl":
-            current_mtl = parts[1] if len(parts) > 1 else ""
-            usemtl_all.add(current_mtl)
+            m = parts[1] if len(parts) > 1 else ""
+            usemtl_all.add(m)
             if current is not None:
-                groups[current]["usemtl"].add(current_mtl)
+                groups[current]["usemtl"].add(m)
         elif tag == "f":
             idxs = []
             for tok in parts[1:]:
@@ -87,25 +98,22 @@ def main():
             if len(idxs) < 3:
                 err("face z mniej niż 3 wierzchołkami: %r" % raw)
                 continue
-            for i in idxs:
-                if not (0 <= i < len(verts)):
-                    err("face wskazuje nieistniejący wierzchołek: %r" % raw)
-                    break
-            else:
+            if all(0 <= i < len(verts) for i in idxs):
                 if current is None:
-                    err("face poza jakąkolwiek grupą `o`: %r" % raw)
+                    err("face poza grupą `o`: %r" % raw)
                 else:
                     groups[current]["faces"] += 1
                     groups[current]["verts"].update(idxs)
+            else:
+                err("face wskazuje nieistniejący wierzchołek: %r" % raw)
 
-    # --- struktura ---
     for name in REQUIRED_GROUPS:
         if name not in groups:
             err("brak wymaganej grupy `o %s`" % name)
         elif groups[name]["faces"] < 4:
             err("grupa %s ma za mało ścianek (%d < 4)" % (name, groups[name]["faces"]))
     if len(verts) < 150:
-        err("za mało wierzchołków łącznie (%d < 150) — model zbyt uproszczony" % len(verts))
+        err("za mało wierzchołków łącznie (%d < 150)" % len(verts))
     total_faces = sum(g["faces"] for g in groups.values())
     if total_faces < 150:
         err("za mało ścianek łącznie (%d < 150)" % total_faces)
@@ -119,11 +127,10 @@ def main():
         v = ys(name)
         return sum(v) / len(v)
 
-    # --- wymiary i orientacja (Y-up) ---
     all_y = [v[1] for v in verts]
     height = max(all_y) - min(all_y)
     if not (4.0 <= height <= 200.0):
-        err("całkowita wysokość %.2f poza zakresem [4, 200] (Y-up, metry)" % height)
+        err("całkowita wysokość %.2f poza zakresem [4, 200]" % height)
 
     order = ["base", "tower", "gallery", "lantern", "roof"]
     cys = {n: centroid_y(n) for n in order + ["door"]}
@@ -132,13 +139,12 @@ def main():
             err("centroid %s (%.2f) powinien leżeć niżej niż %s (%.2f)"
                 % (low, cys[low], high, cys[high]))
     if cys["door"] >= cys["tower"]:
-        err("door powinny być w dolnej części wieży (centroid door < centroid tower)")
+        err("door powinny być w dolnej części wieży")
     if min(ys("base")) - min(all_y) > 1e-6 + 0.2 * height:
         err("base nie sięga dołu modelu")
     if max(all_y) - max(ys("roof")) > 1e-6:
         err("najwyższy punkt modelu powinien należeć do roof")
 
-    # --- zwężanie wieży ---
     tys = ys("tower")
     t_lo, t_hi = min(tys), max(tys)
     if t_hi - t_lo < 0.4 * height:
@@ -154,23 +160,23 @@ def main():
     if not r_top < r_bottom * 0.95:
         err("tower nie zwęża się ku górze (r_dol=%.3f, r_gora=%.3f)" % (r_bottom, r_top))
 
-    # --- materiały (wymagane dopiero, gdy generator tworzy MTL) ---
-    if MTL.exists():
-        if mtllib != MTL.name:
-            err("OBJ nie podpina materiałów: oczekiwano `mtllib %s`" % MTL.name)
+    if mtl_path.exists():
+        if mtllib != mtl_path.name:
+            err("OBJ nie podpina materiałów: oczekiwano `mtllib %s`, jest %r"
+                % (mtl_path.name, mtllib))
         if len(usemtl_all) < 3:
             err("za mało materiałów w użyciu (%d < 3 usemtl)" % len(usemtl_all))
         if len(groups["tower"]["usemtl"]) < 2:
             err("tower powinna używać >=2 materiałów (pasy), ma %d"
                 % len(groups["tower"]["usemtl"]))
-        mtl_text = MTL.read_text(encoding="utf-8")
-        newmtls = [l.split()[1] for l in mtl_text.splitlines()
-                   if l.startswith("newmtl") and len(l.split()) > 1]
-        if len(set(newmtls)) < 3:
-            err("lighthouse.mtl definiuje za mało materiałów (%d < 3 newmtl)" % len(set(newmtls)))
+        mtl_text = mtl_path.read_text(encoding="utf-8")
+        newmtls = {l.split()[1] for l in mtl_text.splitlines()
+                   if l.startswith("newmtl") and len(l.split()) > 1}
+        if len(newmtls) < 3:
+            err("MTL definiuje za mało materiałów (%d < 3 newmtl)" % len(newmtls))
         if "Kd " not in mtl_text:
-            err("lighthouse.mtl nie definiuje kolorów (brak linii Kd)")
-        missing = usemtl_all - set(newmtls)
+            err("MTL nie definiuje kolorów (brak linii Kd)")
+        missing = usemtl_all - newmtls
         if missing:
             err("usemtl bez definicji w MTL: %s" % ", ".join(sorted(missing)))
 
@@ -179,12 +185,67 @@ def main():
 
 def report():
     if errors:
-        print("FAIL — weryfikacja modelu latarni (%d problemów):" % len(errors))
+        print("FAIL — weryfikacja latarni (%d problemów):" % len(errors))
         for e in errors:
             print("  - " + e)
         return 1
-    print("OK: out/lighthouse.obj przechodzi wszystkie kontrole.")
+    print("OK: latarnia przechodzi wszystkie kontrole.")
     return 0
+
+
+def _digest(obj_path):
+    """Hash geometrii+materiałów OBJ. Pomijamy linie komentarzy `#` (wersja
+    Blendera) i `mtllib` (referencja do NAZWY pliku MTL, nie do treści modelu)
+    — istotny jest kształt i materiały, nie nazwa pliku wyjściowego."""
+    h = hashlib.sha256()
+    for path in (obj_path, obj_path.with_suffix(".mtl")):
+        if path.exists():
+            for line in path.read_text(encoding="utf-8").splitlines():
+                if not line.startswith("#") and not line.startswith("mtllib"):
+                    h.update(line.encode("utf-8"))
+                    h.update(b"\n")
+    return h.hexdigest()
+
+
+def main():
+    # tryb fixtury: waliduj wskazany OBJ
+    if len(sys.argv) > 1:
+        obj = Path(sys.argv[1])
+        if not obj.exists():
+            print("FAIL: %s nie istnieje" % obj)
+            return 1
+        return validate_obj(obj)
+
+    if not BUILDER.exists():
+        print("OK: parts/lighthouse_bpy.py jeszcze nie istnieje (zielony baseline).")
+        return 0
+
+    blender = locate_blender()
+    if not blender:
+        print("FAIL: nie znaleziono Blendera (ustaw BLENDER_BIN albo dodaj do PATH)")
+        return 1
+
+    # TEST DETERMINIZMU (bramka wyjścia M3): dwa build+export do TEJ SAMEJ
+    # ścieżki -> identyczny OBJ (porównanie hasha treści, bez nazwy pliku MTL).
+    ok1, out1 = run_build(blender, OBJ)
+    if not ok1:
+        print("FAIL: bpy_build #1 nie powiódł się\n%s" % out1[-800:])
+        return 1
+    digest1 = _digest(OBJ)
+
+    ok2, out2 = run_build(blender, OBJ)   # nadpisuje — ta sama ścieżka, ten sam mtllib
+    if not ok2:
+        print("FAIL: bpy_build #2 (determinizm) nie powiódł się\n%s" % out2[-800:])
+        return 1
+    digest2 = _digest(OBJ)
+    if digest1 != digest2:
+        print("FAIL: NIEDETERMINIZM eksportu — dwa build+export dają różny OBJ "
+              "(%s != %s). Znajdź źródło losowości (seed!) przed uznaniem migracji."
+              % (digest1[:12], digest2[:12]))
+        return 1
+
+    print("OK: determinizm eksportu potwierdzony (hash %s)" % digest1[:12])
+    return validate_obj(OBJ)
 
 
 if __name__ == "__main__":

@@ -133,6 +133,14 @@ def main():
     expect("scene v4: scena v3 NIE przechodzi v4 (pierścień/elipsa)", "check_scene.py",
            [FX / "scene_good_v3.obj", 4], 1, must_contain="v4")
 
+    print("check_lighthouse (bpy — tryb fixtury OBJ):")
+    expect("lighthouse known-good -> 0 (forma bpy + materiały)", "check_lighthouse.py",
+           [FX / "lighthouse_good.obj"], 0)
+    expect("lighthouse known-bad: brak zwężenia wieży", "check_lighthouse.py",
+           [FX / "lighthouse_bad_notaper.obj"], 1, must_contain="zwęża się ku górze")
+    expect("lighthouse known-bad: za niska", "check_lighthouse.py",
+           [FX / "lighthouse_bad_short.obj"], 1, must_contain="wysokość")
+
     print("check_scene (v5 — relacje przestrzenne / styk):")
     expect("scene v5 known-good -> 0 (schody/łódka/mostek przylegają)",
            "check_scene.py", [FX / "scene_good_v5.obj", 5], 0)

@@ -52,3 +52,30 @@ obowiązuje w każdej rundzie rozwoju.
   ±10°, niejednakowe odstępy między instancjami.
 - **Zakaz idealnych powtórzeń instancji**: każda instancja części w scenie
   różni się parametrami (wymiary, kolor, seed) od pozostałych.
+
+## Kontrakt bpy (M3-migracja — nowy fundament, na razie tylko latarnia)
+
+Generator geometrii przechodzi z ręcznego OBJ na proceduralny Blender Python
+(bpy): modyfikatory (bevel, subdivision), materiały proceduralne, realne
+światło. Artefakt końcowy pozostaje MODELEM 3D (eksport OBJ do gry/Unity),
+NIE obrazem. Migracja idzie OBIEKT PO OBIEKCIE — najpierw latarnia, reszta
+sceny (scene.py + części OBJ + check_scene v5) działa po staremu, równolegle.
+
+Trzy zmiany fundamentu:
+
+1. **Na czym operuje checker.** bpy buduje scenę → eksport do OBJ
+   Z ZAAPLIKOWANYMI modyfikatorami → istniejące checkery geometryczne działają
+   na wyeksportowanym OBJ prawie bez zmian. Geometria sprawdzana PO
+   modyfikatorach = to, co realnie widać. Materiały proceduralne checker
+   geometryczny ignoruje (poza Kd w MTL) — ich prawdą jest render bramy
+   (Blender, już mamy).
+2. **Determinizm.** Każdy element losowy dostaje JAWNY seed z parametrów.
+   Bevel/subdivision są deterministyczne. Wymóg twardy: dwa eksporty tej
+   samej sceny = IDENTYCZNY OBJ (bramka wyjścia, check_lighthouse).
+3. **Czym jest „część bpy".** Moduł z funkcją `build(seed=0)`, która tworzy
+   obiekt(y) w bieżącej scenie bpy (nazwane jak wymagane grupy, np. base/
+   tower/gallery/lantern/roof/door), z modyfikatorami i materiałami — ZAMIAST
+   funkcji zwracającej listę wierzchołków. Część NIE eksportuje; eksport robi
+   wyłącznie assembler `scripts/bpy_build.py`. Wzorzec działającej części:
+   `scripts/fixtures/lighthouse_bpy_ref.py`. Uruchomienie pipeline'u:
+   `blender --background --python scripts/bpy_build.py`.
