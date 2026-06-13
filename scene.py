@@ -97,7 +97,7 @@ for _k, _spec in enumerate(_HOUSE_SPECS):
 # boat_2/boat_3 pokrywaja asercje v2 (styk z pomostem + otwarta woda). Kazda
 # instancja rozni sie wymiarami, kolorem i seedem (zakaz idealnych kopii).
 BOATS = [
-    {"x": -3.0, "z": -24.0, "beach": True,
+    {"x": -3.0, "z": -19.0, "beach": True,
      "params": {"length": 3.0, "beam": 1.2, "depth": 0.24, "gunwale_y": 0.40,
                 "hull_color": (0.70, 0.46, 0.24), "seat_color": (0.74, 0.62, 0.42),
                 "seats": 2, "seed": 23}},
