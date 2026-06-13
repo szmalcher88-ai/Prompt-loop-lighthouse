@@ -605,4 +605,4 @@ def main():
 if __name__ == "__main__":
     main()
 
-SCENE_VERSION = 3
+SCENE_VERSION = 4
