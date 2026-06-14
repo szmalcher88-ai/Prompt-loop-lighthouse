@@ -58,6 +58,8 @@ def _build_part(bpy, builder_path, seed):
 # Rejestr rdzenia bpy (M4 hybryda): typ -> (builder_path, layout_positions).
 # A2: tylko latarnia jest realna; pozostałe dojdą jako osobne bloki (terrain...).
 CORE_BUILDERS = {
+    "terrain": os.path.join(ROOT, "parts", "terrain_bpy.py"),
+    "water": os.path.join(ROOT, "parts", "water_bpy.py"),
     "lighthouse": os.path.join(ROOT, "parts", "lighthouse_bpy.py"),
 }
 
