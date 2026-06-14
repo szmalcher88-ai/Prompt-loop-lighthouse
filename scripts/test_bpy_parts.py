@@ -86,13 +86,31 @@ def check_water(groups, gverts):
     return (not msgs), msgs
 
 
+def check_wall(groups, gverts):
+    msgs = []
+    wall_faces = sum(len(g["faces"]) for n, g in groups.items() if n.startswith("wall"))
+    if wall_faces < 8:
+        msgs.append("mur: za mało ścianek 'wall*' (%d < 8)" % wall_faces)
+    levels = set()
+    for n, g in groups.items():
+        if n.startswith("stair"):
+            for _m, idx in g["faces"]:
+                cy = sum(gverts[i][1] for i in idx) / len(idx)
+                levels.add(round(cy, 1))
+    if len(levels) < 6:
+        msgs.append("schody: < 6 poziomów stopni (%d) — schody nie pokonują różnicy" % len(levels))
+    return (not msgs), msgs
+
+
 PART_CHECKS = {
     "water": check_water,
+    "wall": check_wall,
 }
 
 BAD_PERTURB = {
     # known-bad: jak zepsuć eksport, by asercja PADŁA (czerwony dowód)
     "water": lambda verts: [(x, y + 0.5, z) for (x, y, z) in verts],
+    "wall": lambda verts: [(x, 0.0, z) for (x, y, z) in verts],  # spłaszcz -> brak poziomów stopni
 }
 
 
