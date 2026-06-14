@@ -66,6 +66,7 @@ CORE_BUILDERS = {
     "water": os.path.join(ROOT, "parts", "water_bpy.py"),
     "house": os.path.join(ROOT, "parts", "house_bpy.py"),
     "wall": os.path.join(ROOT, "parts", "wall_bpy.py"),
+    "chapel": os.path.join(ROOT, "parts", "chapel_bpy.py"),
     "lighthouse": os.path.join(ROOT, "parts", "lighthouse_bpy.py"),
 }
 

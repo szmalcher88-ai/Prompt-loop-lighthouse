@@ -102,15 +102,43 @@ def check_wall(groups, gverts):
     return (not msgs), msgs
 
 
+def check_chapel(groups, gverts):
+    msgs = []
+    ch = {n: g for n, g in groups.items() if n.startswith("chapel")}
+    if not ch:
+        return False, ["brak grupy chapel w eksporcie"]
+    all_y, cross_y, roof_n = [], [], 0
+    for g in ch.values():
+        for mat, idx in g["faces"]:
+            ys = [gverts[i][1] for i in idx]
+            all_y += ys
+            if mat and "cross" in mat:
+                cross_y += ys
+            if mat and "roof" in mat:
+                roof_n += 1
+    if roof_n < 2:
+        msgs.append("kapliczka: brak dachu (roof*, %d ścianek)" % roof_n)
+    if not cross_y:
+        msgs.append("kapliczka: brak sygnaturki/krzyża (cross*)")
+    elif max(cross_y) < max(all_y) - 1e-4:
+        msgs.append("kapliczka: krzyż nie jest najwyższym punktem (%.2f < %.2f)"
+                    % (max(cross_y), max(all_y)))
+    return (not msgs), msgs
+
+
 PART_CHECKS = {
     "water": check_water,
     "wall": check_wall,
+    "chapel": check_chapel,
 }
 
 BAD_PERTURB = {
     # known-bad: jak zepsuć eksport, by asercja PADŁA (czerwony dowód)
     "water": lambda verts: [(x, y + 0.5, z) for (x, y, z) in verts],
-    "wall": lambda verts: [(x, 0.0, z) for (x, y, z) in verts],  # spłaszcz -> brak poziomów stopni
+    "wall": lambda verts: [(x, 0.0, z) for (x, y, z) in verts],   # spłaszcz -> brak poziomów stopni
+    # podnieś wierzchołek 0 (ściana) ponad krzyż -> krzyż przestaje być najwyższy
+    "chapel": lambda verts: [(v[0], v[1] + 20.0 if i == 0 else v[1], v[2])
+                             for i, v in enumerate(verts)],
 }
 
 
