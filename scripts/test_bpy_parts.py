@@ -96,23 +96,68 @@ BAD_PERTURB = {
 }
 
 
-def build_solo(blender, part):
+def build_solo(blender, part, params=None, suffix=""):
     builder = ROOT / "parts" / (part + "_bpy.py")
-    out = ROOT / "out" / (part + ".obj")
-    p = subprocess.run([blender, "--background", "--python", str(ROOT / "scripts" / "bpy_build.py"),
-                        "--", str(builder), str(out)], capture_output=True, text=True, timeout=300)
+    out = ROOT / "out" / (part + suffix + ".obj")
+    args = [blender, "--background", "--python", str(ROOT / "scripts" / "bpy_build.py"),
+            "--", str(builder), str(out), "0"]
+    for k, v in (params or {}).items():
+        args.append("%s=%s" % (k, v))
+    p = subprocess.run(args, capture_output=True, text=True, timeout=300)
     o = (p.stdout or "") + (p.stderr or "")
     return any(l.startswith("OK:") for l in o.splitlines()), o, out
 
 
+def bbox(verts):
+    xs = [v[0] for v in verts]; ys = [v[1] for v in verts]; zs = [v[2] for v in verts]
+    return (round(max(xs) - min(xs), 2), round(max(ys) - min(ys), 2), round(max(zs) - min(zs), 2))
+
+
+def proof_house(blender):
+    """House: 3 archetypy GEOMETRYCZNIE różne + determinizm per archetyp."""
+    problems = []
+    sigs = {}
+    for a in ("timber", "stone", "two_story"):
+        ok1, o1, out = build_solo(blender, "house", {"archetype": a}, "_" + a)
+        if not ok1:
+            return False, ["bpy_build house %s:\n%s" % (a, o1[-400:])]
+        d1 = digest(out)
+        _, gverts = parse_groups(out)
+        ok2, _, _ = build_solo(blender, "house", {"archetype": a}, "_" + a)
+        if digest(out) != d1:
+            problems.append("NIEDETERMINIZM house[%s]" % a)
+        sigs[a] = (len(gverts), bbox(gverts))
+    pairs = [("timber", "stone"), ("timber", "two_story"), ("stone", "two_story")]
+    for x, y in pairs:
+        if sigs[x] == sigs[y]:
+            problems.append("archetypy %s i %s geometrycznie nieodróżnialne (%s)"
+                            % (x, y, sigs[x]))
+    if not problems:
+        print("  archetypy (wierzch., bbox): " + "; ".join("%s=%s" % (a, sigs[a]) for a in sigs))
+    return (not problems), problems
+
+
+CUSTOM = {"house": proof_house}
+
+
 def main(part):
-    if part not in PART_CHECKS:
-        print("FAIL: brak asercji dla typu %r (dodaj do PART_CHECKS)" % part)
+    if part not in PART_CHECKS and part not in CUSTOM:
+        print("FAIL: brak asercji dla typu %r (dodaj do PART_CHECKS/CUSTOM)" % part)
         return 1
     blender = locate_blender()
     if not blender:
         print("FAIL: nie znaleziono Blendera (BLENDER_BIN)")
         return 1
+
+    if part in CUSTOM:
+        ok, problems = CUSTOM[part](blender)
+        if problems:
+            print("FAIL — blok %s (%d problemów):" % (part, len(problems)))
+            for p in problems:
+                print("  - " + p)
+            return 1
+        print("OK: %s — 3 archetypy różne, każdy deterministyczny." % part)
+        return 0
 
     ok1, o1, out = build_solo(blender, part)
     if not ok1:
