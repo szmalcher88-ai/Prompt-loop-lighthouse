@@ -4,51 +4,61 @@
 
 # Kontekst projektu
 
-Projekt: proceduralne miasteczko nad morzem z latarnią — scena 3D w formacie
-Wavefront OBJ/MTL, generowana czystym Pythonem (stdlib-only, Python >= 3.9).
-Architektura: moduły części w `parts/` (kontrakt: `parts/README.md` —
-PRZECZYTAJ; build(**params) -> lista grup, deterministycznie, zero I/O)
-+ assembler `scene.py` w korzeniu, który scala części i zapisuje
-`out/town.obj` + `out/town.mtl` (katalog `out/` jest w .gitignore).
-Istnieje też `lighthouse.py` (generator latarni, zapisuje out/lighthouse.obj).
-Układ współrzędnych: Y-up, jednostki ~metry, poziom morza y=0.
-Gwiazda polarna estetyki: `ART_DIRECTION.md` (dekompozycja referencji na
-wymagania — przeczytaj sekcje dotyczące Twojego zadania; układ to WYSPA,
-zatoczka z plażą od strony -Z). Wersje kontraktów mają podłogę
-(scripts/versions_floor.json) — wersji nie wolno obniżać. Kontrakt v4
-(organiczny obrys wyspy, domy w gronach zamiast pierścienia, kapliczka po
-stronie kamery głównej) jest opisany w sekcjach v4 scripts/check_scene.py;
-DZIAŁAJĄCY wzorzec całej sceny v4 to scripts/fixtures/gen_scene_v4.py
-(tryb "good") — przeczytaj go przed pisaniem. Renderer Blendera
-(scripts/render_blender.py) to BRAMA po biegu, NIE jest w verify_commands —
-nie uruchamiaj go; sygnał prawdy pętli daje matplotlib (scripts/render_test.py).
+Projekt: proceduralna wyspa z miasteczkiem nad morzem i latarnią. Trwa MIGRACJA
+rdzenia sceny z ręcznych generatorów OBJ na **Blender Python (bpy)**. Architektura
+docelowa jest HYBRYDOWA: rdzeń (teren, woda, domy, mur+schody, kapliczka, latarnia)
+budują buildery bpy w `parts/<typ>_bpy.py`, a drobiazgi (pomost, łódki, mostek,
+krzewy, drzewa, głazy, ścieżka, propsy) pozostają ręcznym OBJ; assembler scala oba
+światy w jeden `out/town.obj`. Układ: Y-up w świecie OBJ (poziom morza y=0); w bpy
+scena jest Z-up, więc wierzchołek (x,y,z) Y-up mapuje się na (x,-z,y) Blender, co
+przy eksporcie (up_axis=Y, forward=-Z) wraca identycznie.
 
-Definicja "zrobione": PEŁNY łańcuch weryfikatorów kończy się kodem 0
-(lista w sekcji zasad poniżej). Weryfikatory w `scripts/` to sygnał prawdy —
-przeczytaj asercje dotyczące Twojego zadania przed pisaniem kodu i traktuj
-je jako specyfikację. Możesz uruchamiać `python ...` lokalnie, by się sprawdzić.
+Kontrakt części bpy: sekcja **"Kontrakt bpy"** w `parts/README.md` (PRZECZYTAJ).
+W skrócie: `build(seed=0, **params)` — gdy `bpy` jest dostępne, tworzy w bieżącej
+scenie nazwane obiekty (grupy) z modyfikatorami i materiałami proceduralnymi i NIC
+nie eksportuje (eksport robi `scripts/bpy_build.py`); gdy `bpy` jest niedostępne
+(tryb headless), zwraca listę grup stdlib reużywając geometrii ręcznej części
+`parts/<typ>.py`. Determinizm bezwzględny: zero losowości, dwa buildy = identyczny
+eksport.
 
-Nie wolno: dodawać zależności spoza stdlib (matplotlib jest zarezerwowany
-dla narzędzi weryfikacji w scripts/, NIE dla części); tworzyć JAKICHKOLWIEK
-plików poza `parts/*.py`, `scene.py`, `lighthouse.py` i artefaktami w `out/`
-— w szczególności zero viewerów HTML i innych artefaktów bez pokrycia
-weryfikatorem; dotykać `scripts/`, `tests/`, `loop.py`, `parts/README.md`,
-`LESSONS/`, `budgets.json`, plików konfiguracyjnych i dokumentacji repo.
+**Wzorzec (_ref) = Twoja widoczna specyfikacja.** Dla każdego zadania istnieje
+DZIAŁAJĄCY, kompletny wzorzec builder a w `scripts/fixtures/<typ>_bpy_ref.py`
+(assembler: `scripts/fixtures/scene_hybrid_ref.py`). Przeczytaj wskazany wzorzec
+W CAŁOŚCI przed pisaniem i odtwórz z niego builder w pliku-celu. Wzorce, wszystkie
+weryfikatory w `scripts/`, fixtures, `scene.py` oraz ręczne części OBJ `parts/*.py`
+są CHRONIONE (sygnał prawdy — pętla ich nie dotyka); są tylko do CZYTANIA.
+
+Blender jest dostępny lokalnie. Weryfikatory bpy uruchamiają Blender wewnętrznie —
+możesz wołać `python scripts/<checker>.py`, żeby się sprawdzić.
+
+Definicja "zrobione": PEŁNY łańcuch weryfikatorów kończy się kodem 0 (lista niżej).
+Weryfikatory to specyfikacja — przeczytaj asercje dotyczące Twojego zadania przed
+pisaniem kodu i traktuj je jako prawdę.
+
+Nie wolno: dodawać zależności spoza stdlib do części (bpy jest dostarczane przez
+Blendera w czasie buildu; matplotlib jest zarezerwowany dla narzędzi w `scripts/`);
+tworzyć JAKICHKOLWIEK plików poza JEDNYM plikiem-celem wskazanym w sekcji "Zadanie"
+(i artefaktami w `out/`) — zero viewerów, skryptów pomocniczych czy "porządków";
+dotykać ścieżek chronionych: `scripts/`, `tests/`, `scene.py`, ręcznych
+`parts/*.py` (bez sufiksu `_bpy`), `parts/README.md`, `LESSONS/`, `budgets.json`,
+plików konfiguracyjnych i dokumentacji repo.
 
 # Zasady pracy (nie zmieniaj ich interpretacji)
 
-1. Wykonaj WYŁĄCZNIE zadanie z sekcji "Zadanie". Żadnych refaktorów,
-   ulepszeń ani porządków "przy okazji" — wyjdziesz poza limit diffa
-   i cała praca zostanie odrzucona.
-2. Nie modyfikuj pliku planu zadań ani ścieżek chronionych — każda taka
-   zmiana jest automatycznie eskalowana do człowieka.
+1. Wykonaj WYŁĄCZNIE zadanie z sekcji "Zadanie": napisz JEDEN plik-cel wskazany
+   w zadaniu, odtwarzając go ze wskazanego wzorca `_ref`. Żadnych refaktorów,
+   ulepszeń ani porządków "przy okazji" — wyjdziesz poza limit diffa i cała praca
+   zostanie odrzucona.
+2. Nie modyfikuj pliku planu zadań ani ścieżek chronionych (w tym wzorców `_ref`,
+   weryfikatorów, fixtures, `scene.py`, ręcznych `parts/*.py`) — każda taka zmiana
+   jest automatycznie eskalowana do człowieka i unieważnia próbę.
 3. Przed zakończeniem uruchom lokalnie weryfikatory i doprowadź je do zieleni:
 {{VERIFY_COMMANDS}}
 4. NIE wykonuj commitów. Commit robi pętla po niezależnej weryfikacji.
    Twoja praca to zmiany w drzewie roboczym, nic więcej.
-5. Jeśli zadanie jest niewykonalne lub niejednoznaczne, nie improwizuj
-   szeroko — zrób minimalną, uczciwą wersję albo zakończ bez zmian,
-   wypisując powód (trafi do logu pętli).
+5. Jeśli zadanie jest niewykonalne lub niejednoznaczne, nie improwizuj szeroko —
+   zrób minimalną, uczciwą wersję albo zakończ bez zmian, wypisując powód
+   (trafi do logu pętli).
 
 # Feedback z poprzedniej próby
 

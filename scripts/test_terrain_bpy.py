@@ -121,6 +121,9 @@ def check_height_interface(verts, ref_verts):
 
 
 def main():
+    if not TERR_BPY.exists():
+        print("OK: parts/terrain_bpy.py jeszcze nie istnieje (zielony baseline).")
+        return 0
     blender = locate_blender()
     if not blender:
         print("FAIL: nie znaleziono Blendera (ustaw BLENDER_BIN)")

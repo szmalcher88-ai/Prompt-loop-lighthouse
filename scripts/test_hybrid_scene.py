@@ -58,8 +58,13 @@ def digest(path):
     return h.hexdigest()
 
 
+ASSEMBLER = ROOT / "parts" / "scene_bpy.py"
+CORE_TARGETS = [ROOT / "parts" / (t + "_bpy.py")
+                for t in ("terrain", "water", "house", "wall", "chapel", "lighthouse")]
+
+
 def build_hybrid(blender):
-    rc, o = run([sys.executable, str(SCRIPTS / "scene_hybrid.py"), "--drobiazgi"])
+    rc, o = run([sys.executable, str(ASSEMBLER), "--drobiazgi"])
     if rc != 0:
         return False, "drobiazgi: " + o[-400:]
     rc, o = run([blender, "--background", "--python", str(SCRIPTS / "bpy_build.py"), "--", "scene"])
@@ -95,6 +100,11 @@ def perturb(src, dst, prefixes, fn):
 
 
 def main():
+    missing = [p.name for p in CORE_TARGETS + [ASSEMBLER] if not p.exists()]
+    if missing:
+        print("OK: brama A4 czeka na cele (brak: %s) — zielony baseline."
+              % ", ".join(missing))
+        return 0
     blender = locate_blender()
     if not blender:
         print("FAIL: nie znaleziono Blendera (BLENDER_BIN)")

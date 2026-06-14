@@ -74,11 +74,14 @@ CORE_BUILDERS = {
 
 
 def _build_scene(bpy, seed):
-    """Hybryda A4: rdzeń przez buildery bpy na pozycjach z layoutu (scene_hybrid)
-    + drobiazgi z ręcznego OBJ -> wspólny town.obj."""
+    """Hybryda: rdzeń przez buildery bpy na pozycjach z layoutu (CEL pętli:
+    parts/scene_bpy.py; wzorzec: scripts/fixtures/scene_hybrid_ref.py) + drobiazgi
+    z ręcznego OBJ -> wspólny town.obj."""
     import math
-    spec = importlib.util.spec_from_file_location(
-        "scene_hybrid", os.path.join(ROOT, "scripts", "scene_hybrid.py"))
+    assembler = os.path.join(ROOT, "parts", "scene_bpy.py")
+    if not os.path.exists(assembler):
+        _die(1, "brak parts/scene_bpy.py (assembler hybrydy — cel zadania finałowego)")
+    spec = importlib.util.spec_from_file_location("scene_bpy", assembler)
     sh = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(sh)
 
@@ -100,7 +103,7 @@ def _build_scene(bpy, seed):
     drob = os.path.join(ROOT, "out", "drobiazgi.obj")
     if not os.path.exists(drob):
         _die(1, "brak out/drobiazgi.obj — uruchom najpierw "
-                "python scripts/scene_hybrid.py --drobiazgi")
+                "python parts/scene_bpy.py --drobiazgi")
     try:
         bpy.ops.wm.obj_import(filepath=drob, up_axis="Y", forward_axis="NEGATIVE_Z")
     except Exception as e:  # noqa: BLE001

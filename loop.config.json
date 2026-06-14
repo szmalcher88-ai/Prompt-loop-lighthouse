@@ -10,18 +10,34 @@
     ["python", "-m", "compileall", "-q", "."],
     ["python", "scripts/test_checkers.py"],
     ["python", "scripts/check_parts.py"],
-    ["python", "scripts/check_lighthouse.py"],
     ["python", "scripts/check_scene.py"],
-    ["python", "scripts/render_test.py"]
+    ["python", "scripts/render_test.py"],
+    ["python", "scripts/test_terrain_bpy.py"],
+    ["python", "scripts/test_bpy_parts.py", "water"],
+    ["python", "scripts/test_bpy_parts.py", "house"],
+    ["python", "scripts/test_bpy_parts.py", "wall"],
+    ["python", "scripts/test_bpy_parts.py", "chapel"],
+    ["python", "scripts/check_lighthouse.py"],
+    ["python", "scripts/test_hybrid_scene.py"]
   ],
 
   "max_iterations": 24,
   "max_retries_per_task": 3,
   "max_wall_seconds": 10800,
   "agent_timeout_seconds": 1200,
-  "verify_timeout_seconds": 600,
+  "verify_timeout_seconds": 900,
 
-  "protected_paths": ["tests/", "scripts/", ".github/", "loop.py", "loop.config.json", "PROMPT.template.md", "README.md", "INSTRUKCJE-KOLEJNA-SESJA.md", "ROZBIEZNOSCI.md", "parts/README.md", "LESSONS/", "budgets.json", "ART_DIRECTION.md", "art/"],
+  "protected_paths": [
+    "tests/", "scripts/", ".github/",
+    "loop.py", "loop.config.json", "PROMPT.template.md",
+    "README.md", "INSTRUKCJE-KOLEJNA-SESJA.md", "ROZBIEZNOSCI.md",
+    "LESSONS/", "budgets.json", "ART_DIRECTION.md", "art/",
+    "scene.py", "parts/README.md",
+    "parts/boat.py", "parts/bridge.py", "parts/bush.py", "parts/chapel.py",
+    "parts/house.py", "parts/lighthouse.py", "parts/path.py", "parts/pier.py",
+    "parts/prop_barrel.py", "parts/prop_crate.py", "parts/rocks.py",
+    "parts/terrain.py", "parts/tree.py", "parts/wall.py", "parts/water.py"
+  ],
   "max_diff_lines": 800,
 
   "feedback_tail_chars": 4000,

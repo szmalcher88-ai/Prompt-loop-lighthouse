@@ -190,6 +190,9 @@ def main(part):
     if part not in PART_CHECKS and part not in CUSTOM:
         print("FAIL: brak asercji dla typu %r (dodaj do PART_CHECKS/CUSTOM)" % part)
         return 1
+    if not (ROOT / "parts" / (part + "_bpy.py")).exists():
+        print("OK: parts/%s_bpy.py jeszcze nie istnieje (zielony baseline)." % part)
+        return 0
     blender = locate_blender()
     if not blender:
         print("FAIL: nie znaleziono Blendera (BLENDER_BIN)")
