@@ -23,8 +23,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 TOWN = ROOT / "out" / "town.obj"
-CORE_GROUPS = {"tower", "base", "gallery", "lantern", "roof", "door"}   # bpy
-OBJ_GROUPS = {"pier", "boat", "tree", "rock", "bridge", "bush"}         # ręczny OBJ
+# po wpięciu layoutu (A4) rdzeń ma prefiksy grup; sprawdzamy obecność typów
+CORE_GROUPS = {"lighthouse", "terrain", "water", "house", "wall", "chapel"}  # bpy
+OBJ_GROUPS = {"pier", "boat", "tree", "rock", "bridge", "bush"}              # ręczny OBJ
 
 
 def locate_blender():

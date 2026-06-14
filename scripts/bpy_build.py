@@ -52,7 +52,9 @@ def _build_part(bpy, builder_path, seed, params=None):
     spec.loader.exec_module(mod)
     if not hasattr(mod, "build"):
         _die(1, "builder %s nie ma funkcji build(seed=0)" % os.path.basename(builder_path))
-    mod.build(seed=seed, **(params or {}))
+    kw = dict(params or {})
+    kw.setdefault("seed", seed)        # seed z params wygrywa (np. spec domu)
+    mod.build(**kw)
 
 
 # Rejestr rdzenia bpy (M4 hybryda): typ -> (builder_path, layout_positions).
@@ -72,27 +74,41 @@ CORE_BUILDERS = {
 
 
 def _build_scene(bpy, seed):
-    """Hybryda: rdzeń w bpy + drobiazgi z ręcznego OBJ -> wspólny town.obj."""
+    """Hybryda A4: rdzeń przez buildery bpy na pozycjach z layoutu (scene_hybrid)
+    + drobiazgi z ręcznego OBJ -> wspólny town.obj."""
+    import math
+    spec = importlib.util.spec_from_file_location(
+        "scene_hybrid", os.path.join(ROOT, "scripts", "scene_hybrid.py"))
+    sh = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(sh)
+
     bpy.ops.wm.read_factory_settings(use_empty=True)
-    # rdzeń bpy (A2: latarnia; reszta dojdzie w kolejnych blokach)
-    for typ, path in CORE_BUILDERS.items():
-        if os.path.exists(path):
-            try:
-                _build_part(bpy, path, seed)
-            except Exception as e:  # noqa: BLE001
-                _die(1, "rdzeń %s: build() zawiódł: %r" % (typ, e))
-    # drobiazgi z ręcznego OBJ (musi być wygenerowany wcześniej: drobiazgi_obj.py)
+    for pl in sh.core_placements():
+        before = set(bpy.data.objects)
+        try:
+            _build_part(bpy, str(pl["builder"]), seed, pl["params"])
+        except Exception as e:  # noqa: BLE001
+            _die(1, "rdzeń %s: build() zawiódł: %r" % (pl["builder"], e))
+        new = [o for o in bpy.data.objects if o not in before]
+        for o in new:
+            o.name = (pl["prefix"] + o.name) if "prefix" in pl else pl["rename"].get(o.name, o.name)
+            lx, ly, lz = pl["loc"]
+            o.location = (o.location[0] + lx, o.location[1] + ly, o.location[2] + lz)
+            if pl.get("rot_z"):
+                o.rotation_euler = (0.0, 0.0, math.radians(pl["rot_z"]))
+
     drob = os.path.join(ROOT, "out", "drobiazgi.obj")
     if not os.path.exists(drob):
-        _die(1, "brak out/drobiazgi.obj — uruchom najpierw python scripts/drobiazgi_obj.py")
+        _die(1, "brak out/drobiazgi.obj — uruchom najpierw "
+                "python scripts/scene_hybrid.py --drobiazgi")
     try:
         bpy.ops.wm.obj_import(filepath=drob, up_axis="Y", forward_axis="NEGATIVE_Z")
     except Exception as e:  # noqa: BLE001
         _die(1, "import drobiazgów OBJ zawiódł: %r" % e)
     out_obj = os.path.join(ROOT, "out", "town.obj")
     nv = _export(bpy, out_obj)
-    core = sum(1 for o in bpy.context.scene.objects if o.type == "MESH")
-    _die(0, "hybryda: town.obj (%d obiektów, %d wierzch.) — rdzeń bpy + drobiazgi OBJ" % (core, nv))
+    nobj = sum(1 for o in bpy.context.scene.objects if o.type == "MESH")
+    _die(0, "hybryda: town.obj (%d obiektów, %d wierzch.) — rdzeń bpy (layout) + drobiazgi OBJ" % (nobj, nv))
 
 
 def main():
