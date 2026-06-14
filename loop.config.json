@@ -21,7 +21,7 @@
     ["python", "scripts/test_hybrid_scene.py"]
   ],
 
-  "max_iterations": 24,
+  "max_iterations": 5,
   "max_retries_per_task": 3,
   "max_wall_seconds": 10800,
   "agent_timeout_seconds": 1200,
