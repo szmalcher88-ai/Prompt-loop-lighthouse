@@ -34,6 +34,7 @@ _WHITE = (0.92, 0.92, 0.90)
 _RED = (0.78, 0.12, 0.10)
 _GLASS = (0.55, 0.75, 0.85)
 _METAL = (0.30, 0.32, 0.34)
+_ROOF = (0.15, 0.14, 0.15)   # ciemny dach laterny (jak w referencji — nie czerwony)
 
 
 # --------------------------------------------------------------------------- #
@@ -118,6 +119,7 @@ def _build_bpy(taper, s):
     red = _mat("stripe_red", _RED)
     glass = _mat("glass", _GLASS, rough=0.1)
     metal = _mat("metal", _METAL, rough=0.4)
+    roof_dark = _mat("roof_dark", _ROOF, rough=0.5)
 
     # --- base: skalisty cokół (cylinder) ---
     bpy.ops.mesh.primitive_cylinder_add(vertices=24, radius=3.0, depth=2.0 * s,
@@ -146,13 +148,14 @@ def _build_bpy(taper, s):
     lantern.data.materials.append(glass)
     _bevel(lantern, width=0.04)
 
-    # --- roof: stożkowy dach (najwyższy punkt), baza SIADA na laternie ---
-    # radius1=1.3 (= promień laterny, brak zwisającego okapu); location 22.0*s ->
-    # baza stożka Z=20.9 < gora laterny 21.1 (zakładka 0.2, dach nie wisi).
-    bpy.ops.mesh.primitive_cone_add(vertices=24, radius1=1.3, radius2=0.0,
-                                    depth=2.2 * s, location=(0, 0, 22.0 * s))
+    # --- roof: NISKI ciemny dach laterny z drobnym okapem (jak referencja) ---
+    # radius1=1.5 (okap 0.2 nad laterną r=1.3); depth 1.4 (niski, nie szpikulec);
+    # location 21.7*s -> baza Z=21.0 ~ góra laterny 21.1 (siada), czubek 22.4
+    # (najwyższy). subsurf zaokrągla w kopułkowaty stożek.
+    bpy.ops.mesh.primitive_cone_add(vertices=24, radius1=1.5, radius2=0.0,
+                                    depth=1.4 * s, location=(0, 0, 21.7 * s))
     roof = _rename("roof")
-    roof.data.materials.append(red)
+    roof.data.materials.append(roof_dark)
     _bevel(roof, width=0.04)
     _subsurf(roof, 1)
 
@@ -235,8 +238,8 @@ def _build_stdlib(taper, s):
                        ["metal"], {"metal": _METAL})
     lantern = _frustum("lantern", 1.3, 1.3, 18.7 * s, 21.1 * s, 1, 20,
                        ["glass"], {"glass": _GLASS})
-    roof = _cone("roof", 1.3, 20.9 * s, 23.1 * s, 24, "stripe_red",
-                 {"stripe_red": _RED})
+    roof = _cone("roof", 1.5, 21.0 * s, 22.4 * s, 24, "roof_dark",
+                 {"roof_dark": _ROOF})
     door = _box("door", 0.0, 2.85 * s, -2.30, 0.55, 1.4 * s, 0.18, "metal",
                 {"metal": _METAL})
     return [base, tower, gallery, lantern, roof, door]
