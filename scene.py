@@ -168,9 +168,11 @@ CRATES = [
 # sosna ma inna wysokosc, promien korony i seed (zakaz idealnych kopii);
 # assembler sadzi ja na terenie (min-Y == wysokosc najblizszego wierzcholka
 # terenu). Grupy tree_i.
+# tree_3/4/5 odsuniete poza grona domow (odstep AABB XZ >= 2.5 m od najblizszego
+# domu — sekcja v5): wczesniej (0.70,79/106/133) ladowaly wprost na house_9/8/3.
 _TREE_SPOTS = [
-    (0.70, 25.0), (0.70, 52.0), (0.70, 79.0), (0.70, 106.0),
-    (0.70, 133.0), (0.70, 160.0), (0.70, 175.0),
+    (0.70, 25.0), (0.70, 52.0), (0.78, 68.0), (0.78, 112.0),
+    (0.90, 145.0), (0.70, 160.0), (0.70, 175.0),
 ]
 _TREE_PARAMS = [
     {"height": 6.4, "base_radius": 1.5, "layers": 3, "seed": 31},
@@ -257,11 +259,15 @@ PATH_ROUTE = [
 # przecina krawedz tarasu (5.5 -> 2.5) przy x=9, z~18.5; jego wysokosc rowna
 # przyrostowi terenu miedzy koncami footprintu, dno spoczywa na dolnym tarasie,
 # a szczyt siega gornego (sekcja v5(a): styk z dwoma poziomami, tol 0.7 m).
+# length/x dobrane tak, by footprint muru lezal w obrebie JEDNEGO tarasu (nie
+# przekraczal uskoku terenu) -> podstawa nie wisi nad gruntem na dlugosci
+# (sekcja v5: posadowienie muru, tol 0.5 m). wall_1 x[11,17] na tarasie y=2.5;
+# wall_2 x[5,9] na plateau y=9.
 WALLS = [
-    {"x": 15.0, "z": 18.5, "rot": 0.0,
-     "params": {"length": 8.0, "height": 1.6, "thickness": 0.6, "seed": 71}},
-    {"x": 8.0, "z": 7.0, "rot": 0.0,
-     "params": {"length": 6.0, "height": 1.8, "thickness": 0.6, "seed": 72}},
+    {"x": 14.0, "z": 18.5, "rot": 0.0,
+     "params": {"length": 6.0, "height": 1.6, "thickness": 0.6, "seed": 71}},
+    {"x": 7.0, "z": 7.0, "rot": 0.0,
+     "params": {"length": 4.0, "height": 1.8, "thickness": 0.6, "seed": 72}},
 ]
 # edge_z: wspolrzedna Z krawedzi tarasu, ktora bieg ma przeciac (footprint
 # rozciaga sie symetrycznie po obu jej stronach, na dwa rozne poziomy terenu).
@@ -633,4 +639,4 @@ def main():
 if __name__ == "__main__":
     main()
 
-SCENE_VERSION = 5
+SCENE_VERSION = 6

@@ -74,7 +74,7 @@ def build_hybrid(blender):
 
 
 def check_scene(obj_path):
-    rc, o = run([sys.executable, str(SCRIPTS / "check_scene.py"), str(obj_path), "5"])
+    rc, o = run([sys.executable, str(SCRIPTS / "check_scene.py"), str(obj_path), "6"])
     return rc, o
 
 

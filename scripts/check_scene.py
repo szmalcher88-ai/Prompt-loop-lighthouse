@@ -526,6 +526,40 @@ def main():
                 err("v5: %s nie sięga górnego poziomu (szczyt %.1f vs teren %.1f, tol %.1f) "
                     "— urywa się w powietrzu/trawie" % (sn, sb[3], high_g, STAIR_TOL))
 
+        # ----- zaostrzenia v6 (SCENE_VERSION >= 6): posadowienie muru na
+        # długości + odstęp drzew od domów. Nowe asercje -> nowa wersja
+        # (ratchet LESSON-003), by nie unieważniać known-good v4/v5. -----
+        if version >= 6:
+            # (v6a) mur posadowiony na CAŁEJ długości (nie wisi nad uskokiem):
+            # próbkuj 17 punktów wzdłuż osi muru, najniższy wierzchołek w
+            # plasterku vs teren. Łapie footprint przekraczający uskok terenu.
+            WALL_FOOT_TOL = 0.5
+            for wn, wg in sorted(members("wall").items()):
+                wb = geom.aabb(verts_of({wn: wg}))
+                (ax0, az0), (ax1, az1) = geom.axis_ends_xz(wb)
+                wv = [verts[i] for i in wg["verts"]]
+                worst = 0.0
+                for s in range(17):
+                    t = s / 16.0
+                    px, pz = ax0 + (ax1 - ax0) * t, az0 + (az1 - az0) * t
+                    near = [v[1] for v in wv if abs(v[0] - px) + abs(v[2] - pz) < 1.0]
+                    base = min(near) if near else wb[2]
+                    worst = max(worst, base - nearest_terrain_y(px, pz))
+                if worst > WALL_FOOT_TOL:
+                    err("v6: %s wisi nad terenem (najwyższa próbka %.1f m > %.1f nad gruntem)"
+                        % (wn, worst, WALL_FOOT_TOL))
+
+            # (v6b) drzewa nie nachodzą na domy (min odstęp AABB XZ >= 2.5 m).
+            # TYLKO tree* — krzewy (bush*) celowo stoją blisko domów.
+            TREE_HOUSE_MIN = 2.5
+            h_boxes = [geom.aabb(verts_of({n: g})) for n, g in houses.items()]
+            for tn, tg in sorted(members("tree").items()):
+                tb = geom.aabb(verts_of({tn: tg}))
+                gap = min((geom.distance_xz(tb, hb) for hb in h_boxes), default=1e9)
+                if gap < TREE_HOUSE_MIN:
+                    err("v6: %s za blisko domu (odstęp AABB XZ %.1f m < %.1f)"
+                        % (tn, gap, TREE_HOUSE_MIN))
+
         # (b) łódka: wariant po pozycji XZ. Pływająca — dno ≈ y=0, burty nad
         # taflą, nie zatopiona głębiej niż próg. Plażowa — spoczywa na piasku.
         for bn, bg in sorted(boats.items()):

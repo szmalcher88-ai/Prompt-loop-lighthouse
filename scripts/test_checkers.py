@@ -160,6 +160,14 @@ def main():
     expect("scene v5: scena v4 NIE przechodzi v5 (brak styku)", "check_scene.py",
            [FX / "scene_good_v4.obj", 5], 1, must_contain="v5")
 
+    print("check_scene (v6 — posadowienie muru na długości + odstęp drzew):")
+    expect("scene v6 known-good -> 0 (mury posadowione, drzewa z dala od domów)",
+           "check_scene.py", [FX / "scene_good_v6.obj", 6], 0)
+    expect("scene v6 known-bad: mur wisi nad terenem", "check_scene.py",
+           [FX / "scene_bad_v6_wall.obj", 6], 1, must_contain="wisi nad terenem")
+    expect("scene v6 known-bad: drzewo nachodzi na dom", "check_scene.py",
+           [FX / "scene_bad_v6_tree.obj", 6], 1, must_contain="za blisko domu")
+
     print("render_test:")
     with tempfile.TemporaryDirectory() as tmp:
         expect("render known-good -> 0", "render_test.py", [FX / "scene_good.obj", tmp], 0)
