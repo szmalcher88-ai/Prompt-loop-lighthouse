@@ -50,6 +50,10 @@ def parse_args():
     extra = argv[argv.index("--") + 1:] if "--" in argv else []
     obj = extra[0] if len(extra) > 0 else os.path.join(ROOT, "out", "town.obj")
     out_dir = extra[1] if len(extra) > 1 else os.path.join(ROOT, "out", "renders_blender")
+    # sciezki ABSOLUTNE wzgledem ROOT: Blender ma CWD=C:\, wiec wzgledny arg
+    # zapisywal rendery pod CWD i brama falszywie padala "render nie zapisal pliku".
+    obj = obj if os.path.isabs(obj) else os.path.join(ROOT, obj)
+    out_dir = out_dir if os.path.isabs(out_dir) else os.path.join(ROOT, out_dir)
     return obj, out_dir
 
 
@@ -85,20 +89,21 @@ def add_light(bpy):
     import mathutils
     # słońce zachodzące: ciepłe, nisko nad horyzontem
     sun_data = bpy.data.lights.new("sun", type="SUN")
-    sun_data.energy = 3.2
-    sun_data.color = (1.0, 0.78, 0.55)
-    sun_data.angle = math.radians(2.0)
+    sun_data.energy = 4.0
+    sun_data.color = (1.0, 0.70, 0.42)        # bursztynowe slonce zlotej godziny
+    sun_data.angle = math.radians(3.0)        # nieco miekkie cienie
     sun = bpy.data.objects.new("sun", sun_data)
     bpy.context.collection.objects.link(sun)
-    # kierunek: nisko (≈18° nad horyzontem), z boku — cienie modelują tarasy
-    sun.rotation_euler = mathutils.Euler((math.radians(62), 0.0, math.radians(35)), "XYZ")
-    # miękkie wypełnienie nieba
+    # elewacja zrodla ~15° nad horyzontem, azymut ~+55° — z BOKU wzgledem kamery
+    # main (azim -50°): dlugie poprzeczne cienie modeluja tarasy i bryly.
+    sun.rotation_euler = mathutils.Euler((math.radians(75), 0.0, math.radians(-125)), "XYZ")
+    # cieple, sciszone niebo -> slonce dominuje, cienie glebsze i barwne (nie szare)
     world = bpy.data.worlds.new("sky")
     world.use_nodes = True
     bg = world.node_tree.nodes.get("Background")
     if bg:
-        bg.inputs[0].default_value = (0.62, 0.72, 0.85, 1.0)
-        bg.inputs[1].default_value = 0.5
+        bg.inputs[0].default_value = (0.50, 0.42, 0.38, 1.0)
+        bg.inputs[1].default_value = 0.40
     bpy.context.scene.world = world
 
 
@@ -143,6 +148,16 @@ def set_engine(bpy):
     scene.render.resolution_y = RES_Y
     scene.render.resolution_percentage = 100
     scene.render.image_settings.file_format = "PNG"
+    # color management: domyslny AgX (Blender 4.x/5.x) odsyca i splaszcza cieple
+    # swiatlo -> render wychodzi szary. Filmic zachowuje cieplo i daje filmowy
+    # roll-off swiatel zlotej godziny. Kazdy atrybut osobno (fallback na domyslne).
+    for _attr, _val in (("view_transform", "Filmic"),
+                        ("look", "Filmic - Medium High Contrast"),
+                        ("exposure", 0.2)):
+        try:
+            setattr(scene.view_settings, _attr, _val)
+        except Exception:  # noqa: BLE001
+            pass
     return used
 
 
