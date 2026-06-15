@@ -146,20 +146,24 @@ def _build_bpy(taper, s):
     lantern.data.materials.append(glass)
     _bevel(lantern, width=0.04)
 
-    # --- roof: stożkowy dach (najwyższy punkt) ---
-    bpy.ops.mesh.primitive_cone_add(vertices=24, radius1=1.6, radius2=0.0,
-                                    depth=2.2 * s, location=(0, 0, 22.6 * s))
+    # --- roof: stożkowy dach (najwyższy punkt), baza SIADA na laternie ---
+    # radius1=1.3 (= promień laterny, brak zwisającego okapu); location 22.0*s ->
+    # baza stożka Z=20.9 < gora laterny 21.1 (zakładka 0.2, dach nie wisi).
+    bpy.ops.mesh.primitive_cone_add(vertices=24, radius1=1.3, radius2=0.0,
+                                    depth=2.2 * s, location=(0, 0, 22.0 * s))
     roof = _rename("roof")
     roof.data.materials.append(red)
     _bevel(roof, width=0.04)
     _subsurf(roof, 1)
 
-    # --- door: drzwi w dolnej części wieży (front -Y) ---
-    bpy.ops.mesh.primitive_cube_add(size=1.0, location=(0, -2.15, 3.2 * s))
+    # --- door: smukły, cienki, wpuszczony panel przy progu wieży (front -Y) ---
+    # scale 0.55x0.18x1.4 (wys/szer=2.5, cienki panel), location z=2.85*s ->
+    # dół drzwi 2.15 ~ spód wieży 2.0; y=-2.30 wpuszcza panel w ścianę; bevel 0.02.
+    bpy.ops.mesh.primitive_cube_add(size=1.0, location=(0, -2.30, 2.85 * s))
     door = _rename("door")
-    door.scale = (0.8, 0.35, 1.7 * s)
+    door.scale = (0.55, 0.18, 1.4 * s)
     door.data.materials.append(metal)
-    _bevel(door, width=0.05)
+    _bevel(door, width=0.02)
 
     return [base, tower, gallery, lantern, roof, door]
 
@@ -231,9 +235,9 @@ def _build_stdlib(taper, s):
                        ["metal"], {"metal": _METAL})
     lantern = _frustum("lantern", 1.3, 1.3, 18.7 * s, 21.1 * s, 1, 20,
                        ["glass"], {"glass": _GLASS})
-    roof = _cone("roof", 1.6, 21.5 * s, 23.7 * s, 24, "stripe_red",
+    roof = _cone("roof", 1.3, 20.9 * s, 23.1 * s, 24, "stripe_red",
                  {"stripe_red": _RED})
-    door = _box("door", 0.0, 3.2 * s, -2.15, 0.8, 1.7 * s, 0.35, "metal",
+    door = _box("door", 0.0, 2.85 * s, -2.30, 0.55, 1.4 * s, 0.18, "metal",
                 {"metal": _METAL})
     return [base, tower, gallery, lantern, roof, door]
 

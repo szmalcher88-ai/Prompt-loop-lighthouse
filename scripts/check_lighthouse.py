@@ -145,10 +145,29 @@ def validate_obj(obj_path):
                 % (low, cys[low], high, cys[high]))
     if cys["door"] >= cys["tower"]:
         err("door powinny być w dolnej części wieży")
+    # drzwi jak drzwi: smukły, cienki panel zakotwiony przy podstawie wieży
+    # (osie OBJ: szerokość=X, wysokość=Y, głąb=Z)
+    dxs = [verts[i][0] for i in groups["door"]["verts"]]
+    dys = [verts[i][1] for i in groups["door"]["verts"]]
+    dzs = [verts[i][2] for i in groups["door"]["verts"]]
+    dw, dh, dd = max(dxs) - min(dxs), max(dys) - min(dys), max(dzs) - min(dzs)
+    if dh <= dw:
+        err("drzwi nie wyższe niż szersze (h=%.2f, w=%.2f)" % (dh, dw))
+    elif dh / dw < 1.6:
+        err("drzwi za przysadziste (h/w=%.2f < 1.6)" % (dh / dw))
+    if dd > 0.35 * dw:
+        err("drzwi za grube/bryłowate (głąb=%.2f > 0.35*szer=%.2f)" % (dd, 0.35 * dw))
+    if min(dys) - min(ys("tower")) > 0.25:
+        err("drzwi nie przy podstawie wieży (dół drzwi %.2f vs dół wieży %.2f)"
+            % (min(dys), min(ys("tower"))))
     if min(ys("base")) - min(all_y) > 1e-6 + 0.2 * height:
         err("base nie sięga dołu modelu")
     if max(all_y) - max(ys("roof")) > 1e-6:
         err("najwyższy punkt modelu powinien należeć do roof")
+    # styk dach<->laterna: dach nie może wisieć nad laterną (overlap/styk = OK)
+    if min(ys("roof")) - max(ys("lantern")) > 0.05:
+        err("dach wisi w powietrzu: przerwa dach<->laterna %.3f m > 0.05"
+            % (min(ys("roof")) - max(ys("lantern"))))
 
     tys = ys("tower")
     t_lo, t_hi = min(tys), max(tys)
