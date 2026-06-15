@@ -57,9 +57,37 @@ def rmax(theta):
     return base * r_organic(theta) * (1.0 - 0.30 * _cove(theta))
 
 
+_NSEED = 1337   # ziarno szumu reliefu — DETERMINISTYCZNE (czyste mieszanie bitowe,
+                # ZERO random/time/hash() — hash() stringów jest randomizowany)
+
+
+def _vnoise(x, z, freq):
+    """Value-noise [-1,1] z interpolacja smoothstep; hash narozników kraty calym
+    mieszaniem bitowym (deterministyczny niezaleznie od PYTHONHASHSEED)."""
+    xf, zf = x * freq, z * freq
+    ix, iz = math.floor(xf), math.floor(zf)
+    tx, tz = xf - ix, zf - iz
+
+    def _h(a, b):
+        n = (int(a) * 73856093) ^ (int(b) * 19349663) ^ (_NSEED * 83492791)
+        return ((n & 0xFFFFFFFF) / 0xFFFFFFFF) * 2.0 - 1.0
+
+    sx = tx * tx * (3 - 2 * tx)
+    sz = tz * tz * (3 - 2 * tz)
+    n0 = _h(ix, iz) * (1 - sx) + _h(ix + 1, iz) * sx
+    n1 = _h(ix, iz + 1) * (1 - sx) + _h(ix + 1, iz + 1) * sx
+    return n0 * (1 - sz) + n1 * sz
+
+
+def _fbm(x, z):
+    """2-oktawowy fBm: zgrubny relief + drobniejsza wariacja."""
+    return 0.6 * _vnoise(x, z, 0.18) + 0.4 * _vnoise(x, z, 0.42)
+
+
 def height(x, z):
     """Wysokosc terenu w (x, z): tarasy ku osi (0,0), ciagla rampa brzegowa,
-    zatoczka z plaza od -Z, turnia."""
+    zatoczka z plaza od -Z, turnia. Plaskie tarasy dostaja organiczny mikro-relief
+    (deterministyczny fBm) — koniec efektu 'plyt Minecrafta'."""
     d = math.hypot(x, z)
     theta = math.atan2(z, x)
     rr = d / rmax(theta)
@@ -80,6 +108,12 @@ def height(x, z):
         h = 5.5                                # taras srodkowy
     else:
         h = 9.0                                # plateau latarni
+    # organiczny mikro-relief TYLKO na płaskich tarasach (NIE rampa/plaża/morze —
+    # chronią obrys i pasmo plaży). Amplituda 0.9 m < separacja tarasów 3 m, więc
+    # poziomy zostają rozróżnialne; displacement w height() => eksport bpy ==
+    # parametryczna co do bajta (test_terrain_bpy).
+    if rr < 0.80 and not (cove > 0.4 and 0.48 <= rr <= 0.92):
+        h += 0.9 * _fbm(x, z)
     dd = math.hypot(x - TURNIA[0], z - TURNIA[1])
     if dd < 6.0:
         h = max(h, 6.5 * (1.0 - dd / 6.0) + 0.5)  # turnia jako lokalne wzniesienie
