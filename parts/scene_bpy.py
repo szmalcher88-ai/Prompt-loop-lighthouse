@@ -26,6 +26,10 @@ PARTS = ROOT / "parts"
 
 # rdzeń (bpy) vs drobiazg (OBJ) — po prefiksie nazwy grupy w scene.assemble()
 CORE_PREFIXES = ("terrain", "water", "lighthouse", "house", "wall", "stair", "chapel")
+# drobiazgi ZMIGROWANE na bpy (budowane przez assembler, NIE importowane z OBJ).
+# Pilot: tylko pomost. Filtr drobiazgów OBJ wyklucza CORE + te prefiksy.
+MIGRATED_PREFIXES = ("pier",)
+BPY_PREFIXES = CORE_PREFIXES + MIGRATED_PREFIXES
 
 
 def _load(path, name):
@@ -118,6 +122,15 @@ def core_placements():
     ty = ny(ccx, ccz)
     P.append(dict(builder=PARTS / "chapel_bpy.py", params=ch["params"],
                   loc=_loc(ch["x"], ty, ch["z"]), rot_z=0.0, rename={"chapel": "chapel_1"}))
+
+    # DROBIAZG ZMIGROWANY (pilot): pomost — dwa wspolliniowe przesla budowane bpy
+    # zamiast importu OBJ. Pozycja IDENTYCZNA jak scene.assemble: tylko dz wzdluz
+    # Z (os x=0, woda y=0), zero rotacji. Cztery obiekty/przeslo (deck/piles/rail/
+    # bollards) dostaja prefiks pier_i_ -> check_scene widzi pier* (styk v5 stoi
+    # na geometrii, nie na sciezce budowy).
+    for i, sp in enumerate(scene.PIERS, start=1):
+        P.append(dict(builder=PARTS / "pier_bpy.py", params=dict(sp["params"]),
+                      loc=_loc(0.0, 0.0, sp["dz"]), rot_z=0.0, prefix="pier_%d_" % i))
     return P
 
 
@@ -131,7 +144,7 @@ CONTRACT_VERSION = 1
 def _drobiazgi_groups():
     """Grupy drobiazgów (OBJ) tej hybrydy: scene.assemble() bez grup rdzenia
     (idą przez buildery bpy). Deterministyczne, zero I/O."""
-    return [g for g in scene.assemble() if not g["name"].startswith(CORE_PREFIXES)]
+    return [g for g in scene.assemble() if not g["name"].startswith(BPY_PREFIXES)]
 
 
 def build(seed=0, **params):
@@ -145,7 +158,7 @@ def build(seed=0, **params):
 def write_drobiazgi(path=None):
     path = Path(path) if path else ROOT / "out" / "drobiazgi.obj"
     groups = scene.assemble()
-    drob = [g for g in groups if not g["name"].startswith(CORE_PREFIXES)]
+    drob = [g for g in groups if not g["name"].startswith(BPY_PREFIXES)]
     path.parent.mkdir(parents=True, exist_ok=True)
     mats = scene.collect_materials(drob)
     scene.write_mtl(path.with_suffix(".mtl"), mats)

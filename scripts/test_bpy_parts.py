@@ -126,10 +126,30 @@ def check_chapel(groups, gverts):
     return (not msgs), msgs
 
 
+def check_pier(groups, gverts):
+    """Pomost na eksporcie: pale sięgają pod wodę (min y < -0.2), pokład/balustrada
+    nad wodą (max y > 0.2), oś długa wzdłuż Z (wchodzi w morze)."""
+    pv = [gverts[i] for n, g in groups.items()
+          for i in {k for _m, idx in g["faces"] for k in idx}]
+    if not pv:
+        return False, ["brak geometrii pomostu w eksporcie"]
+    ys = [v[1] for v in pv]
+    msgs = []
+    if min(ys) > -0.2:
+        msgs.append("pale nie sięgają pod wodę (min y=%.2f > -0.2)" % min(ys))
+    if max(ys) < 0.2:
+        msgs.append("brak pokładu/balustrady nad wodą (max y=%.2f < 0.2)" % max(ys))
+    ext_z = max(v[2] for v in pv) - min(v[2] for v in pv)
+    if ext_z < 6.0:
+        msgs.append("pomost za krótki wzdłuż osi Z (%.1f m < 6)" % ext_z)
+    return (not msgs), msgs
+
+
 PART_CHECKS = {
     "water": check_water,
     "wall": check_wall,
     "chapel": check_chapel,
+    "pier": check_pier,
 }
 
 BAD_PERTURB = {
@@ -139,6 +159,7 @@ BAD_PERTURB = {
     # podnieś wierzchołek 0 (ściana) ponad krzyż -> krzyż przestaje być najwyższy
     "chapel": lambda verts: [(v[0], v[1] + 20.0 if i == 0 else v[1], v[2])
                              for i, v in enumerate(verts)],
+    "pier": lambda verts: [(x, 0.0, z) for (x, y, z) in verts],  # spłaszcz -> pale nie pod wodą
 }
 
 

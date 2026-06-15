@@ -60,7 +60,7 @@ def digest(path):
 
 ASSEMBLER = ROOT / "parts" / "scene_bpy.py"
 CORE_TARGETS = [ROOT / "parts" / (t + "_bpy.py")
-                for t in ("terrain", "water", "house", "wall", "chapel", "lighthouse")]
+                for t in ("terrain", "water", "house", "wall", "chapel", "lighthouse", "pier")]
 
 
 def build_hybrid(blender):

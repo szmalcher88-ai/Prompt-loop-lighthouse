@@ -17,6 +17,7 @@
     ["python", "scripts/test_bpy_parts.py", "house"],
     ["python", "scripts/test_bpy_parts.py", "wall"],
     ["python", "scripts/test_bpy_parts.py", "chapel"],
+    ["python", "scripts/test_bpy_parts.py", "pier"],
     ["python", "scripts/check_lighthouse.py"],
     ["python", "scripts/test_hybrid_scene.py"]
   ],
