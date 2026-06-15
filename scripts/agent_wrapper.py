@@ -18,6 +18,7 @@ Użycie (w loop.config.json jako agent_command, prompt na stdin):
 Logika wydzielona do funkcji (now_fn / sleep_fn / run_fn wstrzykiwane w testach).
 """
 
+import os
 import re
 import subprocess
 import sys
@@ -108,12 +109,29 @@ def _shell_join(cmd):
 
 
 def _real_run(cmd, prompt):
+    # UTF-8 twardo (ROZBIEZNOSCI 2): domyslny cp1250 na Windows wywracal odczyt
+    # wyjscia agenta na znakach spoza cp1250 (bajt 0x88), co przy rc=0 moglo
+    # maskowac wynik agenta. Wymuszamy UTF-8 w PROCESIE agenta (zeby jego python
+    # nie generowal bledow cp1250) ORAZ przy ODCZYCIE jego wyjscia
+    # (errors="replace" => niedekodowalny bajt staje sie znakiem zastepczym,
+    # nie wyjatkiem, ktory mialby szanse przesłonic wynik).
+    env = dict(os.environ)
+    env["PYTHONUTF8"] = "1"
+    env["PYTHONIOENCODING"] = "utf-8"
     p = subprocess.run(_shell_join(cmd), input=prompt, capture_output=True,
-                       text=True, shell=True)
+                       text=True, shell=True, env=env,
+                       encoding="utf-8", errors="replace")
     return p.returncode, (p.stdout or "") + (p.stderr or "")
 
 
 def main(argv):
+    # stdout/stderr wrappera na UTF-8 z podmiana: zapis wyjscia agenta (moze
+    # niesc znaki spoza domyslnego kodowania konsoli) nie wywroci sie przy write.
+    for _stream in (sys.stdout, sys.stderr):
+        try:
+            _stream.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError):
+            pass
     cmd = argv[1:]
     if not cmd:
         print("agent_wrapper: brak komendy agenta w argumentach", file=sys.stderr)
