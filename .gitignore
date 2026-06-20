@@ -2,3 +2,6 @@
 .pytest_cache/
 .loop/
 out/
+
+# Sekret GLM/Z.ai — launcher z kluczem API. NIGDY nie commituj.
+run-glm.cmd

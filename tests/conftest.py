@@ -20,10 +20,16 @@ LOOP_PY = Path(__file__).resolve().parents[1] / "loop.py"
 PROMPT_END = "=====PROMPT-END====="
 
 AGENT_SRC = r'''# -*- coding: utf-8 -*-
+import os
 import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
+# Sonda środowiska: pozwala testom potwierdzić, że nadpisania --model docierają
+# do PROCESU agenta. Zapis tylko gdy zmienna ustawiona (nie zaśmieca innych testów).
+_probe = os.environ.get("LOOP_TEST_ENV_PROBE")
+if _probe:
+    (HERE / "agent_env_probe.txt").write_text(_probe, encoding="utf-8")
 if len(sys.argv) > 1:
     prompt = Path(sys.argv[1]).read_text(encoding="utf-8")
 else:
