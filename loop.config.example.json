@@ -9,17 +9,6 @@
   "_agent": "Komenda uruchamiająca agenta. Prompt idzie na stdin; jeśli wolisz plik, użyj placeholdera {prompt_file} w argumentach. Flaga omijająca potwierdzenia uprawnień jest w praktyce konieczna dla biegu bezobsługowego — uruchamiaj pętlę wyłącznie w środowisku, w którym agent nie ma nic cennego do zepsucia poza tym repo (kontener/sandbox/VM).",
   "agent_command": ["claude", "-p", "--dangerously-skip-permissions"],
 
-  "_model_profiles": "Opcjonalne. Nazwa profilu -> nadpisania środowiska TYLKO procesu agenta, wybierane flagą --model NAZWA (np. --model glm). Bez --model agent działa na domyślnym środowisku (zalogowany Claude/Opus). Weryfikatory i git NIE dostają tych nadpisań — sygnał prawdy zostaje niezależny od backendu. Sekret trzymaj w otoczeniu jako ${ZMIENNA} (nie wpisuj klucza wprost — plik bywa commitowany; w loop_log wartości i tak są redagowane). Przyklad: GLM-5.2 przez endpoint zgodny z Anthropic.",
-  "model_profiles": {
-    "glm": {
-      "ANTHROPIC_BASE_URL": "https://api.z.ai/api/anthropic",
-      "ANTHROPIC_AUTH_TOKEN": "${ZAI_API_KEY}",
-      "ANTHROPIC_DEFAULT_OPUS_MODEL": "glm-5.2[1m]",
-      "ANTHROPIC_DEFAULT_SONNET_MODEL": "glm-5.2[1m]",
-      "CLAUDE_CODE_AUTO_COMPACT_WINDOW": "1000000"
-    }
-  },
-
   "_weryfikatory": "SYGNAŁ PRAWDY PROJEKTU — najważniejsze pole w tym pliku. Listy argv (przenośne) albo stringi (przez shell). Kolejność: od najszybszego do najwolniejszego, pętla zatrzymuje się na pierwszej porażce. Muszą być deterministyczne; flaky test = szum w sygnale prawdy i pętla będzie eskalować losowo.",
   "verify_commands": [
     ["python", "-m", "compileall", "-q", "."],

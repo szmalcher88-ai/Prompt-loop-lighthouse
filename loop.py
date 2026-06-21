@@ -49,15 +49,9 @@ DEFAULTS = {
     "protected_paths": [],                 # prefiksy ścieżek; zmiana => eskalacja (np. "tests/")
     "feedback_tail_chars": 4000,           # ile ogona outputu weryfikatora wraca do agenta
     "on_escalation": "stop",               # "stop" | "skip" (skip = idź do następnego zadania)
-    "agent_env": {},                       # nadpisania środowiska TYLKO procesu agenta;
-                                           #   wartości mogą odwoływać się do ${ZMIENNA}
-    "model_profiles": {},                  # nazwa -> nadpisania środowiska; wybór flagą --model
 }
 
 TASK_OPEN = re.compile(r"^- \[ \] (.+?)\s*$")
-# Odwołania do zmiennych otoczenia w wartościach agent_env / model_profiles:
-# ${ZMIENNA} albo $ZMIENNA. Sekret (np. klucz API) żyje w otoczeniu, nie w configu.
-ENV_REF = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}|\$([A-Za-z_][A-Za-z0-9_]*)")
 
 
 # ----------------------------------------------------------------------------
@@ -83,17 +77,14 @@ class JsonlLog:
         os.fsync(self._f.fileno())
 
 
-def run_cmd(cmd, cwd, timeout=None, stdin_text=None, env=None):
+def run_cmd(cmd, cwd, timeout=None, stdin_text=None):
     """Uruchom komendę. cmd: lista argv (bez shella) lub string (shell).
-    env: gdy podane, nadpisania doklejane do os.environ (reszta dziedziczona);
-    używane tylko dla procesu agenta, nie dla weryfikatorów/gita.
     Zwraca (returncode, stdout+stderr)."""
     shell = isinstance(cmd, str)
-    proc_env = {**os.environ, **env} if env else None
     try:
         p = subprocess.run(
             cmd, cwd=str(cwd), shell=shell, input=stdin_text,
-            capture_output=True, text=True, timeout=timeout, env=proc_env,
+            capture_output=True, text=True, timeout=timeout,
         )
         return p.returncode, (p.stdout or "") + (p.stderr or "")
     except subprocess.TimeoutExpired as e:
@@ -101,41 +92,6 @@ def run_cmd(cmd, cwd, timeout=None, stdin_text=None, env=None):
         return 124, (out or "") + "\n[TIMEOUT po %ss]" % timeout
     except FileNotFoundError as e:
         return 127, f"[NIE ZNALEZIONO KOMENDY] {e}"
-
-
-def resolve_agent_env(base_env, profile, environ):
-    """Złóż nadpisania środowiska agenta: profile NAD base_env, potem rozwiń
-    odwołania ${ZMIENNA}/$ZMIENNA z `environ`. Zwraca (dict, lista_brakujących).
-    Brakująca/pusta zmienna => referencja staje się pusta i trafia na listę
-    (sekret nie jest hardkodowany w configu — żyje w otoczeniu)."""
-    merged = {}
-    merged.update(base_env or {})
-    merged.update(profile or {})
-    missing = []
-
-    def _sub(m):
-        name = m.group(1) or m.group(2)
-        got = environ.get(name, "")
-        if not got:
-            missing.append(name)
-        return got
-
-    resolved = {}
-    for key, val in merged.items():
-        resolved[key] = ENV_REF.sub(_sub, val) if isinstance(val, str) else str(val)
-    return resolved, list(dict.fromkeys(missing))
-
-
-def redacted_config(cfg):
-    """Snapshot configu do logu z ukrytymi wartościami środowiska agenta:
-    gdyby ktoś wpisał sekret wprost zamiast ${ZMIENNA}, nie wycieknie do
-    loop_log.jsonl. Pokazujemy tylko klucze (nazwy zmiennych / profili)."""
-    snap = dict(cfg)
-    for k in ("agent_env", "model_profiles"):
-        v = snap.get(k)
-        if isinstance(v, dict) and v:
-            snap[k] = {"<redagowane>": sorted(v.keys())}
-    return snap
 
 
 def git(args, cwd, timeout=120):
@@ -199,10 +155,9 @@ def build_prompt(template_path: Path, task: str, verify_commands, feedback: str)
     )
 
 
-def run_agent(cfg, prompt: str, cwd, log: JsonlLog, agent_env=None):
+def run_agent(cfg, prompt: str, cwd, log: JsonlLog):
     """Świeży agent na iterację. Prompt przez {prompt_file} albo stdin.
-    Plik promptu lądy POZA repo (temp), żeby nie zaśmiecać drzewa gita.
-    agent_env: nadpisania środowiska (np. backend GLM przez --model)."""
+    Plik promptu lądy POZA repo (temp), żeby nie zaśmiecać drzewa gita."""
     cmd = cfg["agent_command"]
     uses_file = any(isinstance(c, str) and "{prompt_file}" in c for c in cmd) \
         if isinstance(cmd, list) else "{prompt_file}" in cmd
@@ -217,15 +172,13 @@ def run_agent(cfg, prompt: str, cwd, log: JsonlLog, agent_env=None):
                 cmd = [c.replace("{prompt_file}", pfile) for c in cmd]
             else:
                 cmd = cmd.replace("{prompt_file}", pfile)
-            return run_cmd(cmd, cwd, timeout=cfg["agent_timeout_seconds"],
-                           env=agent_env)
+            return run_cmd(cmd, cwd, timeout=cfg["agent_timeout_seconds"])
         finally:
             try:
                 os.unlink(pfile)
             except OSError:
                 pass
-    return run_cmd(cmd, cwd, timeout=cfg["agent_timeout_seconds"], stdin_text=prompt,
-                   env=agent_env)
+    return run_cmd(cmd, cwd, timeout=cfg["agent_timeout_seconds"], stdin_text=prompt)
 
 
 # ----------------------------------------------------------------------------
@@ -380,10 +333,6 @@ def main() -> int:
     ap.add_argument("--config", required=True)
     ap.add_argument("--dry-run", action="store_true",
                     help="preflight + podgląd promptu pierwszego zadania, bez agenta")
-    ap.add_argument("--model", default=None, metavar="PROFIL",
-                    help="nazwa profilu z model_profiles w configu (np. 'glm'); "
-                         "nadpisuje środowisko TYLKO procesu agenta. Bez flagi "
-                         "agent działa na domyślnym środowisku (zalogowany Claude).")
     args = ap.parse_args()
 
     cfg = dict(DEFAULTS)
@@ -393,33 +342,7 @@ def main() -> int:
     state_dir = (cwd / cfg["state_dir"]).resolve()
     state_dir.mkdir(parents=True, exist_ok=True)
     log = JsonlLog(state_dir / "loop_log.jsonl")
-    log.event("loop_start", config=redacted_config(cfg), dry_run=args.dry_run)
-
-    # Profil modelu: nadpisania środowiska TYLKO dla procesu agenta (nie dla
-    # weryfikatorów ani gita — sygnał prawdy zostaje niezależny od backendu).
-    base_env = cfg.get("agent_env") or {}
-    profile = {}
-    if args.model:
-        profiles = cfg.get("model_profiles") or {}
-        if args.model not in profiles:
-            avail = ", ".join(sorted(profiles)) or "(brak zdefiniowanych)"
-            print(f"--model {args.model!r}: brak takiego profilu w model_profiles "
-                  f"(dostępne: {avail}).", file=sys.stderr)
-            log.event("agent_model_unknown", requested=args.model,
-                      available=sorted(profiles))
-            return 2
-        profile = profiles[args.model]
-    agent_env, missing_env = resolve_agent_env(base_env, profile, os.environ)
-    if args.model or agent_env:
-        print(f"Model agenta: profil={args.model or '(domyślny)'}; "
-              f"nadpisania środowiska={sorted(agent_env) or '(brak)'}")
-        log.event("agent_model", profile=args.model, env_keys=sorted(agent_env))
-    if missing_env:
-        print("UWAGA: niezdefiniowane zmienne otoczenia w profilu agenta: "
-              + ", ".join(missing_env) + ". Ustaw je (np. ZAI_API_KEY), inaczej "
-              "agent dostanie puste wartości i prawdopodobnie poleci błąd auth.",
-              file=sys.stderr)
-        log.event("agent_env_missing", vars=missing_env)
+    log.event("loop_start", config={k: v for k, v in cfg.items()}, dry_run=args.dry_run)
 
     # PLAN.md należy do pętli — zawsze chroniony przed agentem.
     protected = list(cfg["protected_paths"]) + [cfg["plan_file"]]
@@ -473,7 +396,7 @@ def main() -> int:
             log.event("attempt_start", task=task, attempt=attempt, iteration=iterations)
 
             prompt = build_prompt(tpl_path, task, cfg["verify_commands"], feedback)
-            rc, agent_out = run_agent(cfg, prompt, cwd, log, agent_env=agent_env)
+            rc, agent_out = run_agent(cfg, prompt, cwd, log)
             log.event("agent_done", task=task, attempt=attempt, rc=rc,
                       output_tail=agent_out[-1000:])
 
